@@ -1,4 +1,6 @@
-﻿using System;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using System;
 using System.Drawing;
 using System.IO;
 
@@ -10,6 +12,7 @@ namespace ImageProcessor.Models
         public string FileName { get; set; }
         public FileType FileType { get; set; }
         public Image OriginalImage { get; set; }
+        public Image<Gray,byte> GenericImage { get; set; }
         public Bitmap ProcessedBitmap { get; set; }
 
         public string GetProcessedFullPath() => $"{FolderPath}/Processed/{FileName}_processed.{FileType}";

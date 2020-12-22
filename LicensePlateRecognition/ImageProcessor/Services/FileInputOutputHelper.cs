@@ -42,7 +42,15 @@ namespace ImageProcessor.Services
             }
 
             Directory.CreateDirectory(Path.GetDirectoryName(path));
-            image.ProcessedBitmap.Save(path);
+
+            if (image.GenericImage != null)
+            {
+                image.GenericImage.Save(path);
+            }
+            else
+            {
+                image.ProcessedBitmap.Save(path);
+            }
         }
     }
 }

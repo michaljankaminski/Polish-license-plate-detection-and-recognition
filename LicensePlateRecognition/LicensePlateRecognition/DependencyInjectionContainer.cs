@@ -1,6 +1,7 @@
 ﻿using System;
 using ImageProcessor;
 using ImageProcessor.Services;
+using ImageProcessor.Services.Filters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ConsoleApplication
@@ -13,6 +14,8 @@ namespace ConsoleApplication
                 .AddSingleton<IImageProcessing, ImageProcessing>()
                 .AddScoped<IBitmapConverter, BitmapConverter>()
                 .AddScoped<IFileInputOutputHelper, FileInputOutputHelper>()
+                .AddScoped<IGaussianBlur, GaussianBlur>()
+                .AddScoped<INonMaximumSuppresion, NonMaximumSuppresion>()
                 .BuildServiceProvider();
         }
     }

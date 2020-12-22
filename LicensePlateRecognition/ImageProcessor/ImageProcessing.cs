@@ -31,11 +31,7 @@ namespace ImageProcessor
 
             foreach (var image in images)
             {
-                _bitmapConverter.ApplyGrayScale(image);
-                //So far gaussian is too slow
-                //_bitmapConverter.ApplyGaussianBlur(image, settings);
-
-
+                _bitmapConverter.ApplyFullCannyOperator(image, settings);
                 _fileInputOutputHelper.SaveImage(image, true);
             }
         }

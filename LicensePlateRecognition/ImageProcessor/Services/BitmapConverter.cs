@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Emgu.CV;
+using Emgu.CV.Structure;
+using ImageProcessor.Models;
+using ImageProcessor.Services.Filters;
 using System.Drawing;
 using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using ImageProcessor.Models;
 
 namespace ImageProcessor.Services
 {
@@ -10,10 +11,15 @@ namespace ImageProcessor.Services
     {
         ImageContext ApplyGrayScale(ImageContext imageContext);
         ImageContext ApplyGaussianBlur(ImageContext imageContext, Settings settings);
+        ImageContext ApplyNms(ImageContext imageContext, Settings settings);
+        ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
     }
 
     public class BitmapConverter : IBitmapConverter
     {
+        private readonly IGaussianBlur _gaussianBlur;
+        private readonly INonMaximumSuppresion _nonMaximumSuppresion;
+
         private static readonly ColorMatrix ColorMatrix = new ColorMatrix(
             new[]
             {
@@ -24,6 +30,12 @@ namespace ImageProcessor.Services
                 new[] {0f, 0, 0, 0, 1}
             });
 
+        public BitmapConverter(IGaussianBlur gaussianBlur, INonMaximumSuppresion nonMaximumSuppresion)
+        {
+            _gaussianBlur = gaussianBlur;
+            _nonMaximumSuppresion = nonMaximumSuppresion;
+        }
+
         public ImageContext ApplyGrayScale(ImageContext imageContext)
         {
             imageContext.ProcessedBitmap = MakeGrayScaleAlter(imageContext.ProcessedBitmap);
@@ -32,8 +44,27 @@ namespace ImageProcessor.Services
 
         public ImageContext ApplyGaussianBlur(ImageContext imageContext, Settings settings)
         {
-            var gaussian = GaussianMatrix(settings.KernelSize, settings.Sigma);
-            imageContext.ProcessedBitmap = Convolve(imageContext.ProcessedBitmap, gaussian);
+            imageContext.ProcessedBitmap = _gaussianBlur.Apply(imageContext.ProcessedBitmap, settings);
+            return imageContext;
+        }
+
+        public ImageContext ApplyNms(ImageContext imageContext, Settings settings)
+        {
+            imageContext.ProcessedBitmap = _nonMaximumSuppresion.Apply(imageContext.ProcessedBitmap, settings);
+            return imageContext;
+        }
+
+        public ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
+        {
+            //Grayscale
+            imageContext.GenericImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
+
+            //Gaussian
+            imageContext.GenericImage = imageContext.GenericImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
+
+            //Canny
+            imageContext.GenericImage = imageContext.GenericImage.Canny(settings.LowThreshold, settings.HighThreshold);
+
             return imageContext;
         }
 
@@ -71,90 +102,6 @@ namespace ImageProcessor.Services
                     0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
             }
             return newBitmap;
-        }
-
-        private static double[,] GaussianMatrix(int size, double sigma)
-        {
-            var kernel = new double[size, size];
-            var kernelSum = 0d;
-            var offset = (size - 1) / 2;
-            var constant = 1d / (2 * Math.PI * sigma * sigma);
-
-            for (var y = -offset; y <= offset; y++)
-            for (var x = -offset; x <= offset; x++)
-            {
-                var distance = ((y * y) + (x * x)) / (2 * sigma * sigma);
-                kernel[y + offset, x + offset] = constant * Math.Exp(-distance);
-                kernelSum += kernel[y + offset, x + offset];
-            }
-
-            for (var y = 0; y < size; y++)
-            for (var x = 0; x < size; x++)
-            {
-                kernel[y, x] = kernel[y, x] * 1d / kernelSum;
-            }
-
-            return kernel;
-        }
-
-        public static Bitmap Convolve(Bitmap srcImage, double[,] kernel)
-        {
-            int width = srcImage.Width;
-            int height = srcImage.Height;
-            BitmapData srcData = srcImage.LockBits(new Rectangle(0, 0, width, height),
-                ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-            var bytes = srcData.Stride * srcData.Height;
-            var buffer = new byte[bytes];
-            var result = new byte[bytes];
-            Marshal.Copy(srcData.Scan0, buffer, 0, bytes);
-            srcImage.UnlockBits(srcData);
-            var colorChannels = 3;
-            var rgb = new double[colorChannels];
-            int foff = (kernel.GetLength(0) - 1) / 2;
-            for (var y = foff; y < height - foff; y++)
-            {
-                for (int x = foff; x < width - foff; x++)
-                {
-                    for (var c = 0; c < colorChannels; c++)
-                    {
-                        rgb[c] = 0.0;
-                    }
-                    var kcenter = y * srcData.Stride + x * 4;
-                    for (var fy = -foff; fy <= foff; fy++)
-                    {
-                        for (var fx = -foff; fx <= foff; fx++)
-                        {
-                            var kpixel = kcenter + fy * srcData.Stride + fx * 4;
-                            for (var c = 0; c < colorChannels; c++)
-                            {
-                                rgb[c] += (double)(buffer[kpixel + c]) * kernel[fy + foff, fx + foff];
-                            }
-                        }
-                    }
-                    for (int c = 0; c < colorChannels; c++)
-                    {
-                        if (rgb[c] > 255)
-                        {
-                            rgb[c] = 255;
-                        }
-                        else if (rgb[c] < 0)
-                        {
-                            rgb[c] = 0;
-                        }
-                    }
-                    for (var c = 0; c < colorChannels; c++)
-                    {
-                        result[kcenter + c] = (byte)rgb[c];
-                    }
-                    result[kcenter + 3] = 255;
-                }
-            }
-            var resultImage = new Bitmap(width, height);
-            var resultData = resultImage.LockBits(new Rectangle(0, 0, width, height),
-                ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
-            Marshal.Copy(result, 0, resultData.Scan0, bytes);
-            resultImage.UnlockBits(resultData);
-            return resultImage;
         }
     }
 }
