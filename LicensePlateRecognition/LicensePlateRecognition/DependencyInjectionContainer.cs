@@ -15,7 +15,7 @@ namespace ConsoleApplication
                 .AddScoped<IBitmapConverter, BitmapConverter>()
                 .AddScoped<IFileInputOutputHelper, FileInputOutputHelper>()
                 .AddScoped<IGaussianBlur, GaussianBlur>()
-                .AddScoped<ISobelFilter, SobelFilter>()
+                .AddScoped<INonMaximumSuppresion, NonMaximumSuppresion>()
                 .BuildServiceProvider();
         }
     }

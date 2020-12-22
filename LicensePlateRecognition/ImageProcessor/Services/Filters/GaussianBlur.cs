@@ -49,7 +49,7 @@ namespace ImageProcessor.Services
 
             void GaussBlur(IList<int> src, IList<int> dest)
             {
-                var bxs = BoxesForGauss(settings.KernelSize, settings.Sigma);
+                var bxs = BoxesForGauss(settings.KernelSize, (int)settings.Sigma);
                 BoxBlur(src, dest, width, height, (bxs[0] - 1) / 2);
                 BoxBlur(dest, src, width, height, (bxs[1] - 1) / 2);
                 BoxBlur(src, dest, width, height, (bxs[2] - 1) / 2);
@@ -100,7 +100,7 @@ namespace ImageProcessor.Services
             return sizes;
         }
 
-        private void BoxBlur(IList<int> source, IList<int> destination, int w, int h, int r)
+        private static void BoxBlur(IList<int> source, IList<int> destination, int w, int h, int r)
         {
             for (var i = 0; i < source.Count; i++) destination[i] = source[i];
             BoxBlurH(destination, source, w, h, r);
@@ -137,7 +137,7 @@ namespace ImageProcessor.Services
             });
         }
 
-        private void BoxBlurT(IList<int> source, IList<int> destination, int width, int height, int r)
+        private static void BoxBlurT(IList<int> source, IList<int> destination, int width, int height, int r)
         {
             var iar = 1d / (r + r + 1);
             Parallel.For(0, width, ParallelOptions, i =>

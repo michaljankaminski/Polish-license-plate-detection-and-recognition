@@ -11,14 +11,14 @@ namespace ImageProcessor.Services
     {
         ImageContext ApplyGrayScale(ImageContext imageContext);
         ImageContext ApplyGaussianBlur(ImageContext imageContext, Settings settings);
-        ImageContext ApplySobelFilter(ImageContext imageContext, Settings settings);
+        ImageContext ApplyNms(ImageContext imageContext, Settings settings);
         ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
     }
 
     public class BitmapConverter : IBitmapConverter
     {
         private readonly IGaussianBlur _gaussianBlur;
-        private readonly ISobelFilter _sobelFilter;
+        private readonly INonMaximumSuppresion _nonMaximumSuppresion;
 
         private static readonly ColorMatrix ColorMatrix = new ColorMatrix(
             new[]
@@ -30,10 +30,10 @@ namespace ImageProcessor.Services
                 new[] {0f, 0, 0, 0, 1}
             });
 
-        public BitmapConverter(IGaussianBlur gaussianBlur, ISobelFilter sobelFilter)
+        public BitmapConverter(IGaussianBlur gaussianBlur, INonMaximumSuppresion nonMaximumSuppresion)
         {
             _gaussianBlur = gaussianBlur;
-            _sobelFilter = sobelFilter;
+            _nonMaximumSuppresion = nonMaximumSuppresion;
         }
 
         public ImageContext ApplyGrayScale(ImageContext imageContext)
@@ -48,18 +48,22 @@ namespace ImageProcessor.Services
             return imageContext;
         }
 
-        public ImageContext ApplySobelFilter(ImageContext imageContext, Settings settings)
+        public ImageContext ApplyNms(ImageContext imageContext, Settings settings)
         {
-            imageContext.ProcessedBitmap = _sobelFilter.Apply(imageContext.ProcessedBitmap, settings);
+            imageContext.ProcessedBitmap = _nonMaximumSuppresion.Apply(imageContext.ProcessedBitmap, settings);
             return imageContext;
         }
 
         public ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
         {
-            var img = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
+            //Grayscale
+            imageContext.GenericImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
 
-            imageContext.GenericImage = img.SmoothGaussian(settings.KernelSize);
-            imageContext.GenericImage = img.Canny(settings.LowThreshold, settings.HighThreshold);
+            //Gaussian
+            imageContext.GenericImage = imageContext.GenericImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
+
+            //Canny
+            imageContext.GenericImage = imageContext.GenericImage.Canny(settings.LowThreshold, settings.HighThreshold);
 
             return imageContext;
         }
