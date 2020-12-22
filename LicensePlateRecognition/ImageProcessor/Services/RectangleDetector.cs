@@ -11,6 +11,7 @@ using Emgu.CV.Util;
 using Emgu.CV.CvEnum;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace ImageProcessor.Services
 {
@@ -31,10 +32,7 @@ namespace ImageProcessor.Services
     public class RectangleDetector : IRectangleDetector
     {
         private readonly IFileInputOutputHelper _fileIOHelper;
-
-        static int[] directionInX = new int[] { -1, 0, 1, 0 };
-        static int[] directionInY = new int[] { 0, 1, 0, -1 };
-
+        int[,] outputMatrix = null;
         public RectangleDetector(
             IFileInputOutputHelper fileIOHelper
             )
@@ -49,19 +47,130 @@ namespace ImageProcessor.Services
                 if (useOpenCV)
                     ProcessOpenCv(imageContext.ProcessedBitmap);
                 else
-                    ProcessDfs(imageContext.ProcessedBitmap);
+                    ProcessCCL(imageContext.ProcessedBitmap);
             }
             return imageContext;
         }
-        #region Procesowanie własne DFS
-        private static Bitmap ProcessDfs(System.Drawing.Bitmap image)
+        #region Procesowanie własne CCL
+        private void FindCCL(int[,] boolMatrix)
+        {
+            List<int[]> linked = new List<int[]>();
+            var rows = boolMatrix.GetLength(0);
+            var cols = boolMatrix.GetLength(1);
+
+            outputMatrix = new int[rows, cols];
+            int nextLabel = 1;
+            // żeby nie bawić się w sprawdzanie warunków
+            // granicznych możemy od razu pominąć pierwszy
+            // wiersz i kolumnę
+            for (int row = 1; row < rows-1; row++)
+            {
+                for (int col = 1; col < cols-2; col++)
+                {   
+                    int currentPixel = boolMatrix[row, col];
+                    // Sprawdzamy czy dany piksel jest tłem
+                    // czy może właściwym pikselem który nas 
+                    // interesuje
+                    if (IsWhite(currentPixel) 
+                        && outputMatrix[row,col] == 0)
+                    {
+                        nextLabel++;
+                        DiscoverNeighbors(row, col, boolMatrix, nextLabel);
+                    }
+                }
+            }
+
+            for(int i = 0; i < rows-1; i++)
+            {
+                int currentPixel = boolMatrix[i, 0];
+                if (IsWhite(currentPixel)
+                    && outputMatrix[i, 0] == 0)
+                {
+                    nextLabel++;
+                    outputMatrix[i, 0] = nextLabel;
+                }
+                else
+                {
+                    if (boolMatrix[i, (cols - 1)] == 1
+                        && outputMatrix[i, (cols - 1)] == 0)
+                    {
+                        nextLabel++;
+                        outputMatrix[i, (cols - 1)] = nextLabel;
+                    }
+                }
+            }
+
+            for(int j = 0; j < cols-1; j++)
+            {
+                int currentPixel = boolMatrix[0, j];
+                if (IsWhite(currentPixel)
+                    && outputMatrix[0, j] == 0)
+                {
+                    nextLabel++;
+                    outputMatrix[0, j] = nextLabel;
+                }
+                else
+                {
+                   if(boolMatrix[rows-1,j] == 1 && outputMatrix[rows-1,j] ==0)
+                    {
+                        nextLabel++;
+                        outputMatrix[rows - 1, j] = nextLabel;
+                    }
+                }
+            }
+
+
+            SaveMatToFile(outputMatrix, @"D:\\testMat3.txt");
+            void SaveMatToFile(int[,] boolMatrix, string filePath)
+            {
+                using (var sw = new StreamWriter(filePath))
+                {
+                    for (int i = 0; i < boolMatrix.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < boolMatrix.GetLength(1); j++)
+                        {
+                            sw.Write(boolMatrix[i, j] + "\t");
+                        }
+                        sw.Write(";\n");
+                    }
+                    sw.Flush();
+                    sw.Close();
+                }
+            }
+            bool IsWhite(int pixel)
+            {
+                if (pixel == 1)
+                    return true;
+                return false;
+            }
+        }
+        private void DiscoverNeighbors(int row, int col, int[,] matrix, int nextLabel)
+        {
+            outputMatrix[row, col] = nextLabel;
+
+            int[] rowDirection = new int[] { 1, -1, 0, 0, 1, -1, 1, -1 };
+            int[] colDirection = new int[] { 0, 0, 1, -1, 1, 1, -1, -1 };
+
+            if(row > 0 && col > 0 && row < matrix.GetLength(0)-1 && col < matrix.GetLength(1)-1)
+            {
+                for(int i = 0; i < 8; i++)
+                {
+                    int nRow = row + rowDirection[i];
+                    int nCol = col + colDirection[i];
+                    if (matrix[nRow, nCol] == 1 && outputMatrix[nRow, nCol] == 0)
+                        DiscoverNeighbors(nRow, nCol, matrix, nextLabel);
+                }
+            }
+        }
+        private Bitmap ProcessCCL(System.Drawing.Bitmap image)
         {
             var binaryMatrix = ConvertBitmapTo2d(image);
             if (binaryMatrix.Length > 0)
             {
                 // generalnie musimy coś tutaj rozsądnego
                 // zwracać z tej metody
-                DetectAreas(binaryMatrix);
+                //DetectAreas(binaryMatrix);
+                FindCCL(binaryMatrix);
             }
 
             return image;
@@ -122,7 +231,7 @@ namespace ImageProcessor.Services
                 }
             }
 
-            //SaveMatToFile(boolMatrix, @"D:\\mat_out.txt");
+            SaveMatToFile(boolMatrix, @"D:\\mat_out.txt");
             return boolMatrix;
 
             // poniżej generalnie do zaorania 
@@ -144,108 +253,7 @@ namespace ImageProcessor.Services
                 }
             }
         }
-        private static void DetectAreas(int[,] pixelsMatrix)
-        {
-            // Wydaje mi sie, że któryś z tych dwóch algor.
-            // będzie odpowiedni przy drobnej modyfikacji
-            // Chuj wie jak go zastosować.
-            // -- Connected-component labeling
-            // -- Flood-fill
-            int rows = pixelsMatrix.GetLength(0);
-            int cols = pixelsMatrix.GetLength(1);
-            bool[,] visited = new bool[rows, cols];
-            ///////
-            ///
-
-            // inicjalnie ustawiamy wszystkie miejsce
-            // jako nieodwiedzone
-            for (int i = 0; i < rows; i++)
-                for (int j = 0; j < cols; j++)
-                    visited[i, j] = false;
-
-            bool cycle = false;
-
-            for (int i = 0; i < rows; i++)
-            {
-                if (cycle == true)
-                    break;
-
-                for (int j = 0; j < cols; j++)
-                {
-                    if (visited[i, j] == false)
-                        cycle = IsCycle(i, j, pixelsMatrix,
-                                        visited, -1, -1, rows, cols);
-
-                    if (cycle == true)
-                        break;
-                }
-            }
-            if (cycle)
-                Console.WriteLine("The cycle was found");
-
-        }
-        private static bool IsValid(
-            int x,
-            int y,
-            int rows,
-            int cols)
-        {
-            if (x < rows && x >= 0 &&
-                y < cols && y >= 0)
-                return true;
-            else
-                return false;
-        }
-        private static bool IsCycle(
-            int x,
-            int y,
-            int[,] arr,
-            bool[,] visited,
-            int parentX,
-            int parentY,
-            int rows,
-            int cols)
-        {
-
-            visited[x, y] = true;
-
-            for (int k = 0; k < 4; k++)
-            {
-                int newX = x + directionInX[k];
-                int newY = y + directionInY[k];
-
-                if (IsValid(newX, newY, rows, cols) == true &&
-                    arr[newX, newY] == arr[x, y] &&
-                    !(parentX == newX && parentY == newY))
-                {
-
-                    if (visited[newX, newY] == true)
-                        return true;
-                    else
-                    {
-                        bool check =
-                            IsCycle(
-                                newX,
-                                newY,
-                                arr,
-                                visited,
-                                x,
-                                y,
-                                rows,
-                                cols);
-
-                        if (check)
-                        {
-                            Console.WriteLine($"Point: {x},{y}");
-                            return true;
-                        }
-                            
-                    }
-                }
-            }
-
-            return false;
-        }
+       
         #endregion
         #region Procesowanie OpenCV
         private static Bitmap ProcessOpenCv(System.Drawing.Bitmap image)
