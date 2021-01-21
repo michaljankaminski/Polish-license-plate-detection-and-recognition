@@ -12,13 +12,16 @@ namespace ImageProcessor
     {
         private readonly IBitmapConverter _bitmapConverter;
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
+        private readonly IRectangleDetector _rectangleDetector;
 
         public ImageProcessing(
             IBitmapConverter bitmapConverter,
-            IFileInputOutputHelper fileInputOutputHelper)
+            IFileInputOutputHelper fileInputOutputHelper, 
+            IRectangleDetector rectangleDetector)
         {
             _bitmapConverter = bitmapConverter;
             _fileInputOutputHelper = fileInputOutputHelper;
+            _rectangleDetector = rectangleDetector;
         }
 
         public void Process(Settings settings)
@@ -32,6 +35,7 @@ namespace ImageProcessor
             foreach (var image in images)
             {
                 _bitmapConverter.ApplyFullCannyOperator(image, settings);
+                _rectangleDetector.DetectPlayGround(image);
                 _fileInputOutputHelper.SaveImage(image, true);
             }
         }

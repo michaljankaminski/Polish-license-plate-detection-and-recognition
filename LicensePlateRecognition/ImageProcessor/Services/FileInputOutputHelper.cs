@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 
 namespace ImageProcessor.Services
 {
@@ -35,13 +36,7 @@ namespace ImageProcessor.Services
         public void SaveImage(ImageContext image, bool deleteIfExist = false)
         {
             var path = image.GetProcessedFullPath();
-            if (deleteIfExist && File.Exists(path))
-            {
-                File.Move(path, path + "_old");
-                File.Delete(path + "_old");
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            DeleteFileAndCreateDirectory(path);
 
             if (image.GenericImage != null)
             {
@@ -51,6 +46,34 @@ namespace ImageProcessor.Services
             {
                 image.ProcessedBitmap.Save(path);
             }
+
+            if (image.ContoursImage != null)
+            {
+                path = image.GetContoursFullPath();
+                DeleteFileAndCreateDirectory(path);
+                image.ContoursImage.Save(path);
+            }
+
+            if (image.PotentialLicensePlates?.Count > 0)
+            {
+                for (var i = 0; i < image.PotentialLicensePlates.Count; i ++ )
+                { 
+                    path = image.GetPotentialLicensePlateFullPath(i);
+                    DeleteFileAndCreateDirectory(path);
+                    image.PotentialLicensePlates[i].Save(path);
+                }
+            }
+        }
+
+        private void DeleteFileAndCreateDirectory(string path)
+        {
+            if (File.Exists(path))
+            {
+                File.Move(path, path + "_old");
+                File.Delete(path + "_old");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path));
         }
     }
 }
