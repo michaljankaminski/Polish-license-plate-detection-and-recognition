@@ -1,4 +1,5 @@
-﻿using ImageProcessor.Models;
+﻿using System.Linq;
+using ImageProcessor.Models;
 using ImageProcessor.Services;
 
 namespace ImageProcessor
@@ -13,15 +14,18 @@ namespace ImageProcessor
         private readonly IBitmapConverter _bitmapConverter;
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
         private readonly IRectangleDetector _rectangleDetector;
+        private readonly ILicensePlateDetector _licensePlateDetector;
 
         public ImageProcessing(
             IBitmapConverter bitmapConverter,
             IFileInputOutputHelper fileInputOutputHelper, 
-            IRectangleDetector rectangleDetector)
+            IRectangleDetector rectangleDetector, 
+            ILicensePlateDetector licensePlateDetector)
         {
             _bitmapConverter = bitmapConverter;
             _fileInputOutputHelper = fileInputOutputHelper;
             _rectangleDetector = rectangleDetector;
+            _licensePlateDetector = licensePlateDetector;
         }
 
         public void Process(Settings settings)
@@ -36,6 +40,9 @@ namespace ImageProcessor
             {
                 _bitmapConverter.ApplyFullCannyOperator(image, settings);
                 _rectangleDetector.DetectPlayGround(image);
+
+                image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
+
                 _fileInputOutputHelper.SaveImage(image, true);
             }
         }

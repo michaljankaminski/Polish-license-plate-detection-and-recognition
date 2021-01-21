@@ -11,6 +11,7 @@ namespace ConsoleApplication
         {
             return new ServiceCollection()
                 .AddSingleton<IRectangleDetector, RectangleDetector>()
+                .AddSingleton<ILicensePlateDetector, LicensePlateDetector>()
                 .AddSingleton<IImageProcessing, ImageProcessing>()
                 .AddScoped<IBitmapConverter, BitmapConverter>()
                 .AddScoped<IFileInputOutputHelper, FileInputOutputHelper>()

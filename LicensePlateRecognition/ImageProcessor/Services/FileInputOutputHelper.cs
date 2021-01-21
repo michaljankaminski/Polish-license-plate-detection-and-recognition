@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
-using System.Linq;
 
 namespace ImageProcessor.Services
 {
@@ -55,6 +54,17 @@ namespace ImageProcessor.Services
                 { 
                     path = image.GetPotentialLicensePlateFullPath(i);
                     image.PotentialLicensePlates[i].Save(path);
+                }
+            }
+
+            if (image.ActualLicensePlates?.Count > 0)
+            {
+                DeleteFileAndCreateDirectory(image.GetActualLicensePlateFullPath(-1));
+
+                for (var i = 0; i < image.ActualLicensePlates.Count; i++)
+                {
+                    path = image.GetActualLicensePlateFullPath(i);
+                    image.ActualLicensePlates[i].Save(path);
                 }
             }
         }

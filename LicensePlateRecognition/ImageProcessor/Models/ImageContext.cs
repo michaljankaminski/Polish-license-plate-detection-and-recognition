@@ -22,11 +22,13 @@ namespace ImageProcessor.Models
         public Image<Rgb, byte> ContoursImage { get; set; }
 
         public IReadOnlyList<Bitmap> PotentialLicensePlates { get; set; }
+        public IReadOnlyList<Image<Hsv, byte>> ActualLicensePlates { get; set; }
 
         public string GetProcessedFullPath() => $"{FolderPath}/Processed/{FileName}_afterCanny.{FileType}";
         public string GetContoursFullPath() => $"{FolderPath}/Contours/{FileName}_contours.{FileType}";
 
         public string GetPotentialLicensePlateFullPath(int number) => $"{FolderPath}/Potential/{FileName}/{number}.{FileType}";
+        public string GetActualLicensePlateFullPath(int number) => $"{FolderPath}/Actual/{FileName}/{number}.{FileType}";
 
         public ImageContext(string filePath, Image image)
         {
