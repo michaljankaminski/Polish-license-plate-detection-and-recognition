@@ -15,15 +15,16 @@ namespace ImageProcessor.Services
 
     public class BitmapConverter : IBitmapConverter
     {
+        private const int Width = 600;
+        private const int Height = 450;
+
         public ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
         {
-            imageContext.ProcessedBitmap = new Bitmap(imageContext.OriginalImage);
-
             //Grayscale
             imageContext.GenericImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
 
             //Resize
-            CvInvoke.Resize(imageContext.GenericImage, imageContext.GenericImage, new Size(600, 450));
+            ResizeImage(imageContext);
 
             var thresholds = GetThreshHold(imageContext);
 
@@ -47,10 +48,26 @@ namespace ImageProcessor.Services
             return (lower, upper);
         }
 
-        private Bitmap ResizeImage(Bitmap image, int width = 600, int height = 450)
+        private void ResizeImage(ImageContext imageContext)
         {
-            var destRect = new Rectangle(0, 0, width, height);
-            var destImage = new Bitmap(width, height);
+            SetResizeRatio(imageContext);
+
+            CvInvoke.Resize(imageContext.GenericImage, imageContext.GenericImage, new Size(Width, Height));
+        }
+
+        private void SetResizeRatio(ImageContext imageContext)
+        {
+            var originalWidth = imageContext.GenericImage.Size.Width;
+            var originalHeight = imageContext.GenericImage.Size.Height;
+
+            imageContext.WidthResizeRatio = (double)originalWidth / Width;
+            imageContext.HeightResizeRatio =(double)originalHeight / Height;
+        }
+
+        private Bitmap ResizeImage(Bitmap image)
+        {
+            var destRect = new Rectangle(0, 0, Width, Height);
+            var destImage = new Bitmap(Width, Height);
 
             destImage.SetResolution(image.HorizontalResolution, image.VerticalResolution);
 

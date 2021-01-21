@@ -14,6 +14,9 @@ namespace ImageProcessor.Models
         public FileType FileType { get; set; }
         public Image OriginalImage { get; set; }
 
+        public double WidthResizeRatio { get; set; }
+        public double HeightResizeRatio { get; set; }
+
         public Image<Gray, byte> GenericImage { get; set; }
         public Bitmap ProcessedBitmap { get; set; }
         public Image<Rgb, byte> ContoursImage { get; set; }
@@ -31,6 +34,7 @@ namespace ImageProcessor.Models
             FileName = Path.GetFileNameWithoutExtension(filePath);
             FileType = Enum.Parse<FileType>(Path.GetExtension(filePath).Substring(1),true);
             OriginalImage = image;
+            ProcessedBitmap = new Bitmap(image);
         }
 
         public void Dispose()

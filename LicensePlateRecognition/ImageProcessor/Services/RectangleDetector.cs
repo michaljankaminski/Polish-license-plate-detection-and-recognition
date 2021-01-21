@@ -67,13 +67,9 @@ namespace ImageProcessor.Services
 
                 CvInvoke.ApproxPolyDP(contour, newContour, 0.01 * CvInvoke.ArcLength(contour, true), true);
 
-
                 if (newContour.Size >= 4)
                 {
                     var rect = CvInvoke.BoundingRectangle(newContour);
-                    var area = rect.Height * rect.Width; //520x114
-
-                    var newArea = CvInvoke.ContourArea(newContour);
 
                     var ratio = (double)rect.Width / rect.Height;
 
@@ -82,7 +78,7 @@ namespace ImageProcessor.Services
                     {
                         squareContours.Add(newContour);
 
-                        potentialLicensePlates.Add(CropImage(imageContext.ProcessedBitmap, rect));
+                        potentialLicensePlates.Add(CropImage(imageContext, rect));
 
                         CvInvoke.Rectangle(newImage, rect, new MCvScalar(0, 250, 0));
                         //CvInvoke.PutText(newImage, ratio.ToString(), newContour[0], FontFace.HersheyComplex, 0.3, new MCvScalar(0, 250, 250));
@@ -97,12 +93,29 @@ namespace ImageProcessor.Services
             return imageContext;
         }
 
-        public Bitmap CropImage(Bitmap source, Rectangle section)
+        public Bitmap CropImage(ImageContext imageContext, Rectangle section)
+        {
+            var newWidth = (int)Math.Ceiling(section.Width * imageContext.WidthResizeRatio);
+            var newHeight = (int)Math.Ceiling(section.Height * imageContext.HeightResizeRatio);
+
+            section.Size = new Size(newWidth, newHeight);
+            section.X = (int) Math.Ceiling(section.X * imageContext.HeightResizeRatio);
+            section.Y = (int) Math.Ceiling(section.Y * imageContext.HeightResizeRatio);
+
+            var bitmap = new Bitmap(newWidth, newHeight);
+            using (var g = Graphics.FromImage(bitmap))
+            {
+                g.DrawImage(imageContext.ProcessedBitmap, 0, 0, section, GraphicsUnit.Pixel);
+                return bitmap;
+            }
+        }
+
+        public Bitmap CropImageWithoutResize(ImageContext imageContext, Rectangle section)
         {
             var bitmap = new Bitmap(section.Width, section.Height);
             using (var g = Graphics.FromImage(bitmap))
             {
-                g.DrawImage(source, 0, 0, section, GraphicsUnit.Pixel);
+                g.DrawImage(imageContext.ProcessedBitmap, 0, 0, section, GraphicsUnit.Pixel);
                 return bitmap;
             }
         }

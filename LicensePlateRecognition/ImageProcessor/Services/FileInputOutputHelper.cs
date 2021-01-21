@@ -38,14 +38,7 @@ namespace ImageProcessor.Services
             var path = image.GetProcessedFullPath();
             DeleteFileAndCreateDirectory(path);
 
-            if (image.GenericImage != null)
-            {
-                image.GenericImage.Save(path);
-            }
-            else
-            {
-                image.ProcessedBitmap.Save(path);
-            }
+            image.GenericImage?.Save(path);
 
             if (image.ContoursImage != null)
             {
@@ -56,10 +49,11 @@ namespace ImageProcessor.Services
 
             if (image.PotentialLicensePlates?.Count > 0)
             {
+                DeleteFileAndCreateDirectory(image.GetPotentialLicensePlateFullPath(-1));
+
                 for (var i = 0; i < image.PotentialLicensePlates.Count; i ++ )
                 { 
                     path = image.GetPotentialLicensePlateFullPath(i);
-                    DeleteFileAndCreateDirectory(path);
                     image.PotentialLicensePlates[i].Save(path);
                 }
             }
