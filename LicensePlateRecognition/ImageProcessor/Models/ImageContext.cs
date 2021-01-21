@@ -9,10 +9,10 @@ namespace ImageProcessor.Models
 {
     public class ImageContext : IDisposable
     {
-        public string FolderPath { get; set; }
-        public string FileName { get; set; }
-        public FileType FileType { get; set; }
-        public Image OriginalImage { get; set; }
+        public string FolderPath { get; }
+        public string FileName { get; }
+        public FileType FileType { get; }
+        public Image OriginalImage { get; }
 
         public double WidthResizeRatio { get; set; }
         public double HeightResizeRatio { get; set; }
@@ -23,12 +23,6 @@ namespace ImageProcessor.Models
 
         public IReadOnlyList<Bitmap> PotentialLicensePlates { get; set; }
         public IReadOnlyList<Image<Hsv, byte>> ActualLicensePlates { get; set; }
-
-        public string GetProcessedFullPath() => $"{FolderPath}/Processed/{FileName}_afterCanny.png";
-        public string GetContoursFullPath() => $"{FolderPath}/Contours/{FileName}_contours.png";
-
-        public string GetPotentialLicensePlateFullPath(int number) => $"{FolderPath}/Potential/{FileName}/{number}.png";
-        public string GetActualLicensePlateFullPath(int number) => $"{FolderPath}/Actual/{FileName}/{number}.png";
 
         public ImageContext(string filePath, Image image)
         {

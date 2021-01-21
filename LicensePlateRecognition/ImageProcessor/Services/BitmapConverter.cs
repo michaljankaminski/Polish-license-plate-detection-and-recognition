@@ -30,7 +30,6 @@ namespace ImageProcessor.Services
 
             //Gaussian
             imageContext.GenericImage = imageContext.GenericImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
-            //imageContext.GenericImage = imageContext.GenericImage.SmoothBilateral(settings.KernelSize, 15, 15);
 
             //Canny
             imageContext.GenericImage = imageContext.GenericImage.Canny(thresholds.Lower, thresholds.Upper);
