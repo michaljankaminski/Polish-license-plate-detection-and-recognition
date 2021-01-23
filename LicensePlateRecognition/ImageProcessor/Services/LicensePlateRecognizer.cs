@@ -33,24 +33,24 @@ namespace ImageProcessor.Services
             _ocrParams = new Dictionary<string, string>
             {
                 { "TEST_DATA_PATH", "D:\\OCR\\"},
-                { "TEST_DATA_LANG","License_plate"},
-                { "WHITE_LIST", "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890" }
+                { "TEST_DATA_LANG", ""},
+                { "WHITE_LIST", "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 " }
             };
         }
         public void RecognizePlate(ImageContext imageContext, bool useTesseract = true)
         {
-            // RecognizePlateWithSplit(imageContext);
+            //RecognizePlateWithSplit(imageContext);
             RecognizePlate(imageContext);
         }
         private void RecognizePlate(ImageContext imageContext)
         {
-            _ocrParams["TEST_DATA_LANG"] = "lplate+eng2";
+            _ocrParams["TEST_DATA_LANG"] = "lplate+eng2+pol";
             foreach (var image in imageContext.ActualLicensePlates)
             {
                 var platesArea = FindPlateContours(image, false);
                 if (platesArea != null)
                 {
-                    string potentialNumber = RecognizeNumber(platesArea.First().Item1, PageSegMode.RawLine);
+                    string potentialNumber = RecognizeNumber(platesArea.First().Item1, PageSegMode.SingleBlock);
                     if (ValidateCharactersSet(potentialNumber))
                         Console.WriteLine($"{imageContext.FileName}: {potentialNumber}");
                 }
@@ -58,7 +58,7 @@ namespace ImageProcessor.Services
         }
         private void RecognizePlateWithSplit(ImageContext imageContext)
         {
-            _ocrParams["TEST_DATA_LANG"] = "mf+lplate";
+            _ocrParams["TEST_DATA_LANG"] = "lplate+mf";
 
             List<string> foundPlates = new List<string>();
             foreach (var image in imageContext.ActualLicensePlates)
@@ -84,23 +84,23 @@ namespace ImageProcessor.Services
             using (var contours = new VectorOfVectorOfPoint())
             {
                 CvInvoke.BilateralFilter(
-                    croppedImage, 
-                    bilateralMat, 
+                    croppedImage,
+                    bilateralMat,
                     20, 20, 10);
 
                 var treshold = BitmapConverter.GetAutomatedTreshold(bilateralMat.ToImage<Gray, byte>());
 
                 CvInvoke.Canny(
-                    croppedImage, 
-                    cannyMat, 
-                    treshold.Lower, 
+                    croppedImage,
+                    cannyMat,
+                    treshold.Lower,
                     treshold.Upper);
 
                 CvInvoke.FindContours(
-                    cannyMat.ToImage<Gray, byte>(), 
-                    contours, 
-                    null, 
-                    RetrType.External, 
+                    cannyMat.ToImage<Gray, byte>(),
+                    contours,
+                    null,
+                    RetrType.External,
                     ChainApproxMethod.ChainApproxSimple);
 
                 for (var i = 0; i < contours.Size; i++)
@@ -109,8 +109,8 @@ namespace ImageProcessor.Services
                     var smoothContour = new VectorOfPoint(contour.Size);
 
                     CvInvoke.ApproxPolyDP(
-                        contour, 
-                        smoothContour, 
+                        contour,
+                        smoothContour,
                         0.01 * CvInvoke.ArcLength(contour, true), true);
 
                     if (smoothContour.Size >= 4)
@@ -120,7 +120,7 @@ namespace ImageProcessor.Services
                         double area = rect.Width * (double)rect.Height;
 
                         if (ratio <= 1.5 &&
-                            ratio >= 0.01 &&
+                            ratio >= 0.06 &&
                             area >= 400)
                         {
                             if (split)
@@ -160,6 +160,10 @@ namespace ImageProcessor.Services
                 ocr.SetVariable(
                     "tessedit_char_whitelist",
                     _ocrParams["WHITE_LIST"]);
+
+                ocr.SetVariable
+                    ("user_defined_dpi", "70");
+
 
                 ocr.PageSegMode = pageMode;
 
