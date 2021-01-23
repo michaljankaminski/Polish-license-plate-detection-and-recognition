@@ -1,7 +1,6 @@
 ﻿using ImageProcessor;
 using ImageProcessor.Models;
 using Microsoft.Extensions.DependencyInjection;
-using Utils;
 
 namespace ConsoleApplication
 {
@@ -9,7 +8,6 @@ namespace ConsoleApplication
     {
         private static void Main()
         {
-            Logger.Log("Start");
 
             var serviceProvider = DependencyInjectionContainer.Build();
             var scope = serviceProvider.CreateScope();
@@ -20,7 +18,6 @@ namespace ConsoleApplication
             };
             scope.ServiceProvider.GetRequiredService<IImageProcessing>().Process(settings);
 
-            Logger.Log("Finished");
         }
     }
 }
