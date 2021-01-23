@@ -22,6 +22,7 @@ namespace ImageProcessor.Models
 
         public IReadOnlyList<Bitmap> PotentialLicensePlates { get; set; }
         public IReadOnlyList<Image<Hsv, byte>> ActualLicensePlates { get; set; }
+        public IReadOnlyList<string> FoundLicensePlates { get; set; }
 
         public ImageContext(string filePath, Image image)
         {

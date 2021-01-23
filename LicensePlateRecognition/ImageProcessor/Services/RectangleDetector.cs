@@ -53,7 +53,6 @@ namespace ImageProcessor.Services
         public ImageContext DetectPlayGround(ImageContext imageContext)
         {
             var newImage = imageContext.GenericImage.Convert<Rgb, byte>();
-
             var contours = new VectorOfVectorOfPoint();
             var potentialLicensePlates = new List<Bitmap>();
 
@@ -69,14 +68,16 @@ namespace ImageProcessor.Services
                 if (newContour.Size >= 4)
                 {
                     var rect = CvInvoke.BoundingRectangle(newContour);
-
                     var ratio = (double)rect.Width / rect.Height;
 
                     //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56
                     if (ratio > 2 && ratio < 5)
                     {
-                        potentialLicensePlates.Add(CropImage(imageContext, rect));
+                        var croppedImage = RotateContour(
+                           imageContext.ProcessedBitmap.ToImage<Rgb, byte>(),
+                           ScaleContour(newContour, imageContext.WidthResizeRatio, imageContext.HeightResizeRatio));
 
+                        potentialLicensePlates.Add(croppedImage.ToBitmap());
                         CvInvoke.Rectangle(newImage, rect, new MCvScalar(0, 250, 0));
                         //CvInvoke.PutText(newImage, ratio.ToString(), newContour[0], FontFace.HersheyComplex, 0.3, new MCvScalar(0, 250, 250));
                     }
@@ -110,6 +111,7 @@ namespace ImageProcessor.Services
                 return bitmap;
             }
         }
+
 
         #region Procesowanie własne CCL
         private void FindCCL(int[,] boolMatrix)
@@ -385,6 +387,77 @@ namespace ImageProcessor.Services
             image.UnlockBits(bmpData);
 
             return cvImage.Mat;
+        }
+        #endregion
+        #region HELPERS
+        private Rectangle ExpandRectangleArea(Image<Gray, byte> frm, Rectangle boundingBox, int padding)
+        {
+            Rectangle returnRect = new Rectangle(boundingBox.X - padding, boundingBox.Y - padding, boundingBox.Width + (padding * 2), boundingBox.Height + (padding * 2));
+            if (returnRect.X < 0) returnRect.X = 0;
+            if (returnRect.Y < 0) returnRect.Y = 0;
+            if (returnRect.X + returnRect.Width >= frm.Cols) returnRect.Width = frm.Cols - returnRect.X;
+            if (returnRect.Y + returnRect.Height >= frm.Rows) returnRect.Height = frm.Rows - returnRect.Y;
+            return returnRect;
+        }
+        private VectorOfPoint ScaleContour(VectorOfPoint contour, double widthRatio, double heightRatio)
+        {
+            Point[] pointsArr = new Point[contour.Size];
+
+            for (int i = 0; i < contour.Size; i++)
+            {
+                pointsArr[i] = new Point(
+                    (int)Math.Ceiling(contour[i].X * widthRatio),
+                    (int)Math.Ceiling(contour[i].Y * heightRatio));
+            }
+
+            return new VectorOfPoint(pointsArr);
+        }
+        private Image<Rgb, byte> RotateContour(Image<Rgb, byte> image, VectorOfPoint contour)
+        {
+            RotatedRect box = CvInvoke.MinAreaRect(contour);
+            if (box.Angle < -45.0)
+            {
+                float tmp = box.Size.Width;
+                box.Size.Width = box.Size.Height;
+                box.Size.Height = tmp;
+                box.Angle += 90.0f;
+            }
+            else if (box.Angle > 45.0)
+            {
+                float tmp = box.Size.Width;
+                box.Size.Width = box.Size.Height;
+                box.Size.Height = tmp;
+                box.Angle -= 90.0f;
+            }
+            using (UMat rotatedMat = new UMat())
+            using (UMat resizedMat = new UMat())
+            {
+                PointF[] srcCorners = box.GetVertices();
+                PointF[] destCorners =
+                    new PointF[]
+                    {
+                        new PointF(0, box.Size.Height - 1),
+                        new PointF(0, 0),
+                        new PointF(box.Size.Width - 1, 0),
+                        new PointF(box.Size.Width - 1, box.Size.Height - 1)
+                    };
+
+                using (Mat rot = CvInvoke.GetAffineTransform(srcCorners, destCorners))
+                    CvInvoke.WarpAffine(image, rotatedMat, rot, Size.Round(box.Size));
+
+                Size approxSize = new Size(600, 450);
+                double scale = Math.Min(approxSize.Width / box.Size.Width, approxSize.Height / box.Size.Height);
+                Size newSize = new Size((int)Math.Round(box.Size.Width * scale), (int)Math.Round(box.Size.Height * scale));
+                CvInvoke.Resize(rotatedMat, resizedMat, newSize, 0, 0, Inter.Cubic);
+
+                int edgePixelSize = 2;
+                Rectangle newRoi = new Rectangle(new Point(edgePixelSize, edgePixelSize),
+                   resizedMat.Size - new Size(2 * edgePixelSize, 2 * edgePixelSize));
+
+                UMat plate = new UMat(resizedMat, newRoi);
+
+                return plate.ToImage<Rgb, byte>();
+            }
         }
         #endregion
     }
