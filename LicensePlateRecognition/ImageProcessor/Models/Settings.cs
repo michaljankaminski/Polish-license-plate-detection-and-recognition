@@ -5,8 +5,9 @@
         public string ImagesPath { get; set; }
 
         public int KernelSize { get; set; } = 5;//5
-        public double Sigma { get; set; } = 1.5;//2
-        public double LowThreshold { get; set; } = 80;
-        public double HighThreshold { get; set; } = 240;//200
+        public double Sigma { get; set; } = 1.45;//1.5
+        public bool UseAutoThreshold { get; set; } = true;
+        public double LowThreshold { get; set; } = 50;
+        public double HighThreshold { get; set; } = 150;//200
     }
 }

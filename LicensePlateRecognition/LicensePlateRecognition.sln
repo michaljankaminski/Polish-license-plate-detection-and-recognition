@@ -8,6 +8,9 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageProcessor", "ImageProcessor\ImageProcessor.csproj", "{69FD94E3-1668-42CB-9F64-2E9594F5C379}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageProcessorTests", "ImageProcessorTests\ImageProcessorTests.csproj", "{CCF44BB8-B363-4B7E-865A-CDE69303BCF3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{69FD94E3-1668-42CB-9F64-2E9594F5C379} = {69FD94E3-1668-42CB-9F64-2E9594F5C379}
+	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Utils", "Utils\Utils.csproj", "{63CD5711-492B-4536-8E52-7CC0821E8627}"
 EndProject

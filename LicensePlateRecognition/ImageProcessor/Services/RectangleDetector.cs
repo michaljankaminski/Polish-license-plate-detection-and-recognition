@@ -2,13 +2,13 @@
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
+using ImageProcessor.Helpers;
 using ImageProcessor.Models;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 
 namespace ImageProcessor.Services
 {
@@ -29,14 +29,14 @@ namespace ImageProcessor.Services
     /// <inheritdoc cref="IRectangleDetector"/>
     public class RectangleDetector : IRectangleDetector
     {
-        private readonly IFileInputOutputHelper _fileIOHelper;
+        private readonly IImageCropper _imageCropper;
         int[,] outputMatrix = null;
-        public RectangleDetector(
-            IFileInputOutputHelper fileIOHelper
-            )
+
+        public RectangleDetector(IImageCropper imageCropper)
         {
-            _fileIOHelper = fileIOHelper;
+            _imageCropper = imageCropper;
         }
+
         public ImageContext Detect(ImageContext imageContext, bool useOpenCV = false)
         {
             if (imageContext.ProcessedBitmap.Width > 0
@@ -55,7 +55,6 @@ namespace ImageProcessor.Services
             var newImage = imageContext.GenericImage.Convert<Rgb, byte>();
 
             var contours = new VectorOfVectorOfPoint();
-            var squareContours = new List<VectorOfPoint>();
             var potentialLicensePlates = new List<Bitmap>();
 
             CvInvoke.FindContours(imageContext.GenericImage, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
@@ -76,8 +75,6 @@ namespace ImageProcessor.Services
                     //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56
                     if (ratio > 2 && ratio < 5)
                     {
-                        squareContours.Add(newContour);
-
                         potentialLicensePlates.Add(CropImage(imageContext, rect));
 
                         CvInvoke.Rectangle(newImage, rect, new MCvScalar(0, 250, 0));
@@ -85,8 +82,7 @@ namespace ImageProcessor.Services
                     }
                 }
             }
-
-            //CvInvoke.DrawContours(newImage, new VectorOfVectorOfPoint(squareContours.ToArray()), -1, new MCvScalar(250, 0, 250));
+            
             imageContext.PotentialLicensePlates = potentialLicensePlates;
             imageContext.ContoursImage = newImage;
 
@@ -102,12 +98,7 @@ namespace ImageProcessor.Services
             section.X = (int) Math.Ceiling(section.X * imageContext.HeightResizeRatio);
             section.Y = (int) Math.Ceiling(section.Y * imageContext.HeightResizeRatio);
 
-            var bitmap = new Bitmap(newWidth, newHeight);
-            using (var g = Graphics.FromImage(bitmap))
-            {
-                g.DrawImage(imageContext.ProcessedBitmap, 0, 0, section, GraphicsUnit.Pixel);
-                return bitmap;
-            }
+            return _imageCropper.CropImage(imageContext.ProcessedBitmap, section);
         }
 
         public Bitmap CropImageWithoutResize(ImageContext imageContext, Rectangle section)

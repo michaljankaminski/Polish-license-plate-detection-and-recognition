@@ -2,7 +2,7 @@
 using ImageProcessor.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using ImageProcessor.Extensions;
+using ImageProcessor.Helpers;
 
 namespace ConsoleApplication
 {

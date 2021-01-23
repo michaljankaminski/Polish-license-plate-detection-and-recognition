@@ -32,11 +32,7 @@ namespace ImageProcessor
         {
             var imagesPath = settings.ImagesPath;
 
-            var context = new ImageProcessingContext();
-
-            var images = _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg);
-
-            foreach (var image in images)
+            foreach (var image in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
             {
                 _bitmapConverter.ApplyFullCannyOperator(image, settings);
                 _rectangleDetector.DetectPlayGround(image);
@@ -44,6 +40,8 @@ namespace ImageProcessor
                 image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
 
                 _fileInputOutputHelper.SaveImage(image, true);
+
+                image.Dispose();
             }
         }
     }
