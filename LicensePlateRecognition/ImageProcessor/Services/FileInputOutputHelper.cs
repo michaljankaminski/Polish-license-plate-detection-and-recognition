@@ -45,7 +45,7 @@ namespace ImageProcessor.Services
             var path = _imagePathProvider.GetProcessedFullPath(image);
             DeleteFileAndCreateDirectory(path);
 
-            image.GenericImage?.Save(path);
+            image.ProcessedImage?.Save(path);
 
             if (image.ContoursImage != null)
             {
@@ -54,23 +54,23 @@ namespace ImageProcessor.Services
                 image.ContoursImage.Save(path);
             }
 
-            if (image.PotentialLicensePlates?.Count > 0)
+            if (image.PotentialFirstLayerLicensePlates?.Count > 0)
             {
-                for (var i = 0; i < image.PotentialLicensePlates.Count; i ++ )
+                for (var i = 0; i < image.PotentialFirstLayerLicensePlates.Count; i ++ )
                 {
                     DeleteFileAndCreateDirectory(_imagePathProvider.GetPotentialLicensePlateFullPath(image, i));
                     path = _imagePathProvider.GetPotentialLicensePlateFullPath(image, i);
-                    image.PotentialLicensePlates[i].Save(path);
+                    image.PotentialFirstLayerLicensePlates[i].Image.Save(path);
                 }
             }
 
-            if (image.ActualLicensePlates?.Count > 0)
+            if (image.PotentialSecondLayerLicensePlates?.Count > 0)
             {
-                for (var i = 0; i < image.ActualLicensePlates.Count; i++)
+                for (var i = 0; i < image.PotentialSecondLayerLicensePlates.Count; i++)
                 {
                     DeleteFileAndCreateDirectory(_imagePathProvider.GetActualLicensePlateFullPath(image, i));
                     path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
-                    image.ActualLicensePlates[i].Save(path);
+                    image.PotentialSecondLayerLicensePlates[i].Image.Save(path);
                 }
             }
         }

@@ -13,11 +13,11 @@ namespace ConsoleApplication
             return new ServiceCollection()
                 .AddSingleton<IImageProcessing, ImageProcessing>()
                 .AddSingleton<IImageCropper, ImageCropper>()
-                .AddSingleton<IPlateRecognizer, PlateRecognizer>()
-                .AddScoped<IRectangleDetector, RectangleDetector>()
-                .AddScoped<ILicensePlateDetector, LicensePlateDetector>()
+                .AddSingleton<ILicensePlateReader, LicenseLicensePlateReader>()
+                .AddScoped<ILicensePlateAreaDetector, LicensePlateAreaDetector>()
+                .AddScoped<ILicensePlateAreaValidator, LicensePlateAreaValidator>()
                 .AddScoped<IImagePathProvider, ImagePathProvider>()
-                .AddScoped<IBitmapConverter, BitmapConverter>()
+                .AddScoped<IImageConverter, ImageConverter>()
                 .AddScoped<IFileInputOutputHelper, FileInputOutputHelper>()
                 .BuildServiceProvider();
         }

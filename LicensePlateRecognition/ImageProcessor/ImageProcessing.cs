@@ -11,24 +11,24 @@ namespace ImageProcessor
 
     public class ImageProcessing : IImageProcessing
     {
-        private readonly IBitmapConverter _bitmapConverter;
+        private readonly IImageConverter _imageConverter;
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
-        private readonly IRectangleDetector _rectangleDetector;
-        private readonly ILicensePlateDetector _licensePlateDetector;
-        private readonly IPlateRecognizer _plateRecognizer;
+        private readonly ILicensePlateAreaDetector _licensePlateAreaDetector;
+        private readonly ILicensePlateAreaValidator _licensePlateAreaValidator;
+        private readonly ILicensePlateReader _licensePlateReader;
 
         public ImageProcessing(
-            IBitmapConverter bitmapConverter,
+            IImageConverter imageConverter,
             IFileInputOutputHelper fileInputOutputHelper, 
-            IRectangleDetector rectangleDetector, 
-            ILicensePlateDetector licensePlateDetector,
-            IPlateRecognizer plateRecognizer)
+            ILicensePlateAreaDetector licensePlateAreaDetector, 
+            ILicensePlateAreaValidator licensePlateAreaValidator,
+            ILicensePlateReader licensePlateReader)
         {
-            _bitmapConverter = bitmapConverter;
+            _imageConverter = imageConverter;
             _fileInputOutputHelper = fileInputOutputHelper;
-            _rectangleDetector = rectangleDetector;
-            _licensePlateDetector = licensePlateDetector;
-            _plateRecognizer = plateRecognizer;
+            _licensePlateAreaDetector = licensePlateAreaDetector;
+            _licensePlateAreaValidator = licensePlateAreaValidator;
+            _licensePlateReader = licensePlateReader;
         }
 
         public void Process(Settings settings)
@@ -37,12 +37,12 @@ namespace ImageProcessor
 
             foreach (var image in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
             {
-                _bitmapConverter.ApplyFullCannyOperator(image, settings);
-                _rectangleDetector.Detect(image);
+                _imageConverter.ApplyFullCannyOperator(image, settings);
+                _licensePlateAreaDetector.Detect(image);
 
-                image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
+                image.PotentialSecondLayerLicensePlates = _licensePlateAreaValidator.GetLicensePlateImages(image).ToList();
 
-                _plateRecognizer.RecognizePlate(image, false);
+                _licensePlateReader.RecognizePlate(image, false);
                 _fileInputOutputHelper.SaveImage(image, true);
 
                 image.Dispose();

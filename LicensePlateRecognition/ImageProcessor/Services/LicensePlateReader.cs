@@ -1,20 +1,19 @@
-﻿using ImageProcessor.Models;
+﻿using Emgu.CV;
+using Emgu.CV.CvEnum;
+using Emgu.CV.OCR;
+using Emgu.CV.Structure;
+using Emgu.CV.Util;
+using ImageProcessor.Models;
+using ImageProcessor.Models.LicensePlate;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
-using Emgu.CV.Structure;
-using Emgu.CV.Util;
-using Emgu.CV.CvEnum;
-using System.Drawing;
-using Emgu.CV.OCR;
-using Emgu.CV;
 using System.Text.RegularExpressions;
 
 namespace ImageProcessor.Services
 {
-    public interface IPlateRecognizer
+    public interface ILicensePlateReader
     {
         /// <summary>
         /// From the cropped /segmented image it reads the numeber plates
@@ -23,13 +22,13 @@ namespace ImageProcessor.Services
         /// <param name="imageContext">Segmented image</param>
         void RecognizePlate(ImageContext imageContext, bool useTesseract = true);
     }
-    public class PlateRecognizer : IPlateRecognizer
+    public class LicenseLicensePlateReader : ILicensePlateReader
     {
         private readonly IDictionary<string, string> _ocrParams;
-        private readonly IBitmapConverter _bitmapConverter;
-        public PlateRecognizer(IBitmapConverter bitmapConverter)
+        private readonly IImageConverter _imageConverter;
+        public LicenseLicensePlateReader(IImageConverter imageConverter)
         {
-            _bitmapConverter = bitmapConverter;
+            _imageConverter = imageConverter;
             _ocrParams = new Dictionary<string, string>
             {
                 { "TEST_DATA_PATH", "D:\\OCR\\"},
@@ -44,27 +43,36 @@ namespace ImageProcessor.Services
         }
         private void RecognizePlate(ImageContext imageContext)
         {
+            var actualLicensePlates = new List<ActualLicensePlate>();
+
             _ocrParams["TEST_DATA_LANG"] = "lplate+eng2+pol";
-            foreach (var image in imageContext.ActualLicensePlates)
+
+            foreach (var potentialLicensePlate in imageContext.PotentialSecondLayerLicensePlates)
             {
-                var platesArea = FindPlateContours(image, false);
+                var platesArea = FindPlateContours(potentialLicensePlate.Image, false);
                 if (platesArea != null)
                 {
                     string potentialNumber = RecognizeNumber(platesArea.First().Item1, PageSegMode.SingleBlock);
                     if (ValidateCharactersSet(potentialNumber))
+                    {
                         Console.WriteLine($"{imageContext.FileName}: {potentialNumber}");
+                        actualLicensePlates.Add(new ActualLicensePlate(potentialLicensePlate, potentialNumber));
+                    }
                 }
             }
+
+            imageContext.ActualLicensePlates = actualLicensePlates;
         }
         private void RecognizePlateWithSplit(ImageContext imageContext)
         {
             _ocrParams["TEST_DATA_LANG"] = "lplate+mf";
 
-            List<string> foundPlates = new List<string>();
-            foreach (var image in imageContext.ActualLicensePlates)
+            List<ActualLicensePlate> foundPlates = new List<ActualLicensePlate>();
+
+            foreach (var image in imageContext.PotentialSecondLayerLicensePlates)
             {
                 List<string> plateNumber = new List<string>();
-                var characterAreas = FindPlateContours(image, true);
+                var characterAreas = FindPlateContours(image.Image, true);
                 if (characterAreas != null)
                     foreach (var character in characterAreas)
                         plateNumber.Add(RecognizeNumber(character.Item1, PageSegMode.SingleChar));
@@ -72,9 +80,10 @@ namespace ImageProcessor.Services
                 if (plateNumber.Count > 5)
                     Console.WriteLine($"{imageContext.FileName}: {String.Join("", plateNumber)}");
             }
-            imageContext.FoundLicensePlates = foundPlates;
+
+            imageContext.ActualLicensePlates = foundPlates;
         }
-        private List<(UMat, int)> FindPlateContours(Image<Hsv, byte> croppedImage, bool split = false)
+        private List<(UMat, int)> FindPlateContours(Image<Gray, byte> croppedImage, bool split = false)
         {
             int charactersCnt = 0;
 
@@ -88,7 +97,7 @@ namespace ImageProcessor.Services
                     bilateralMat,
                     20, 20, 10);
 
-                var treshold = BitmapConverter.GetAutomatedTreshold(bilateralMat.ToImage<Gray, byte>());
+                var treshold = ImageConverter.GetAutomatedTreshold(bilateralMat.ToImage<Gray, byte>());
 
                 CvInvoke.Canny(
                     croppedImage,
@@ -97,7 +106,7 @@ namespace ImageProcessor.Services
                     treshold.Upper);
 
                 CvInvoke.FindContours(
-                    cannyMat.ToImage<Gray, byte>(),
+                    cannyMat,
                     contours,
                     null,
                     RetrType.External,
@@ -147,7 +156,7 @@ namespace ImageProcessor.Services
 
         private string RecognizeNumber(UMat imgWithNumber, PageSegMode pageMode = PageSegMode.SingleChar)
         {
-            Emgu.CV.OCR.Tesseract.Character[] characters;
+            Tesseract.Character[] characters;
 
             StringBuilder licensePlateNumber = new StringBuilder();
             using (var ocr = new Emgu.CV.OCR.Tesseract())

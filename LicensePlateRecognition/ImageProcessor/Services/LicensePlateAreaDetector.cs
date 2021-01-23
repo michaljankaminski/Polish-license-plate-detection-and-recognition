@@ -2,17 +2,15 @@
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using ImageProcessor.Helpers;
 using ImageProcessor.Models;
+using ImageProcessor.Models.LicensePlate;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
-using System.IO;
 
 namespace ImageProcessor.Services
 {
-    public interface IRectangleDetector
+    public interface ILicensePlateAreaDetector
     {
         /// <summary>
         /// Detects the rectangles from given image context
@@ -25,17 +23,17 @@ namespace ImageProcessor.Services
         /// <param name="useOpenCV">Use OpenCV library algorithms</param>
         ImageContext Detect(ImageContext imageContext);
     }
-    /// <inheritdoc cref="IRectangleDetector"/>
-    public class RectangleDetector : IRectangleDetector
+    /// <inheritdoc cref="ILicensePlateAreaDetector"/>
+    public class LicensePlateAreaDetector : ILicensePlateAreaDetector
     {
         public ImageContext Detect(ImageContext imageContext)
         {
             var contours = new VectorOfVectorOfPoint();
-            var contoursImage = imageContext.GenericImage.Convert<Rgb, byte>();
-            var potentialLicensePlates = new List<Bitmap>();
+            var contoursImage = imageContext.ProcessedImage.Convert<Rgb, byte>();
+            var potentialLicensePlates = new List<PotentialFirstLayerLicensePlate>();
 
             CvInvoke.FindContours(
-                imageContext.GenericImage,
+                imageContext.ProcessedImage,
                 contours,
                 null,
                 RetrType.External,
@@ -62,15 +60,15 @@ namespace ImageProcessor.Services
                         ratio < 5)
                     {
                         var croppedImage = RotateContour(
-                           imageContext.ProcessedBitmap.ToImage<Rgb, byte>(),
+                           imageContext.OriginalBitmap.ToImage<Rgb, byte>(),
                            ScaleContour(smoothContour, imageContext.WidthResizeRatio, imageContext.HeightResizeRatio));
 
-                        potentialLicensePlates.Add(croppedImage.ToBitmap());
+                        potentialLicensePlates.Add(new PotentialFirstLayerLicensePlate(rect, croppedImage));
                         CvInvoke.Rectangle(contoursImage, rect, new MCvScalar(0, 250, 0));
                     }
                 }
             }
-            imageContext.PotentialLicensePlates = potentialLicensePlates;
+            imageContext.PotentialFirstLayerLicensePlates = potentialLicensePlates;
             imageContext.ContoursImage = contoursImage;
 
             return imageContext;

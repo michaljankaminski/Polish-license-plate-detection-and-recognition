@@ -7,26 +7,36 @@ using System.Drawing;
 
 namespace ImageProcessor.Services
 {
-    public interface IBitmapConverter
+    public interface IImageConverter
     {
         void ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
     }
 
-    public class BitmapConverter : IBitmapConverter
+    public class ImageConverter : IImageConverter
     {
         public void ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
         {
             //Grayscale
-            var processedImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
+            var processedImage = imageContext.OriginalBitmap.ToImage<Gray, byte>();
             //Resize
             ResizeImage(imageContext, processedImage);
-            var thresholds = GetThreshHold(processedImage, settings);
+            var (lower, upper) = GetThreshHold(processedImage, settings);
             //Gaussian
             processedImage = processedImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
             //Canny
-            processedImage = processedImage.Canny(thresholds.Lower, thresholds.Upper);
+            processedImage = processedImage.Canny(lower, upper);
 
-            imageContext.GenericImage = processedImage;
+            imageContext.ProcessedImage = processedImage;
+        }
+
+        public static (double Lower, double Upper) GetAutomatedTreshold(Image<Gray, byte> image, double sigma = 0.33)
+        {
+            var median = image.GetAverage().Intensity;
+
+            var lower = Math.Max(0, (1 - sigma) * median);
+            var upper = Math.Min(255, (1 + sigma) * median);
+
+            return (lower, upper);
         }
 
         private static void ResizeImage(ImageContext imageContext, Image<Gray, byte> image)
@@ -51,15 +61,6 @@ namespace ImageProcessor.Services
                 settings.UseAutoThreshold
                 ? GetAutomatedTreshold(image, sigma)
                 : (settings.LowThreshold, settings.HighThreshold);
-        }
-        public static (double Lower, double Upper) GetAutomatedTreshold(Image<Gray, byte> image, double sigma = 0.33)
-        {
-            var median = image.GetAverage().Intensity;
-
-            var lower = Math.Max(0, (1 - sigma) * median);
-            var upper = Math.Min(255, (1 + sigma) * median);
-
-            return (lower, upper);
         }
     }
 }
