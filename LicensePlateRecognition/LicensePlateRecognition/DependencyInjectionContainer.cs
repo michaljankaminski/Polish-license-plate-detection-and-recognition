@@ -1,8 +1,8 @@
-﻿using System;
-using ImageProcessor;
+﻿using ImageProcessor;
 using ImageProcessor.Services;
-using ImageProcessor.Services.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using ImageProcessor.Helpers;
 
 namespace ConsoleApplication
 {
@@ -11,12 +11,12 @@ namespace ConsoleApplication
         public static IServiceProvider Build()
         {
             return new ServiceCollection()
-                .AddSingleton<IRectangleDetector, RectangleDetector>()
                 .AddSingleton<IImageProcessing, ImageProcessing>()
+                .AddScoped<IRectangleDetector, RectangleDetector>()
+                .AddScoped<ILicensePlateDetector, LicensePlateDetector>()
+                .AddScoped<IImagePathProvider, ImagePathProvider>()
                 .AddScoped<IBitmapConverter, BitmapConverter>()
                 .AddScoped<IFileInputOutputHelper, FileInputOutputHelper>()
-                .AddScoped<IGaussianBlur, GaussianBlur>()
-                .AddScoped<INonMaximumSuppresion, NonMaximumSuppresion>()
                 .BuildServiceProvider();
         }
     }

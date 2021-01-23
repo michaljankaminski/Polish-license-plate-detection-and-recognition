@@ -1,17 +1,14 @@
-﻿using ImageProcessor.Models;
-using Microsoft.Extensions.Logging;
-using Emgu.CV;
-using Emgu.Util;
-using System;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
+﻿using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using Emgu.CV.Util;
-using Emgu.CV.CvEnum;
+using ImageProcessor.Helpers;
+using ImageProcessor.Models;
+using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 
 namespace ImageProcessor.Services
 {
@@ -27,18 +24,19 @@ namespace ImageProcessor.Services
         /// <param name="imageContext">Context of the processing image</param>
         /// <param name="useOpenCV">Use OpenCV library algorithms</param>
         ImageContext Detect(ImageContext imageContext, bool useOpenCV = false);
+        ImageContext DetectPlayGround(ImageContext imageContext);
     }
     /// <inheritdoc cref="IRectangleDetector"/>
     public class RectangleDetector : IRectangleDetector
     {
-        private readonly IFileInputOutputHelper _fileIOHelper;
+        private readonly IImageCropper _imageCropper;
         int[,] outputMatrix = null;
-        public RectangleDetector(
-            IFileInputOutputHelper fileIOHelper
-            )
+
+        public RectangleDetector(IImageCropper imageCropper)
         {
-            _fileIOHelper = fileIOHelper;
+            _imageCropper = imageCropper;
         }
+
         public ImageContext Detect(ImageContext imageContext, bool useOpenCV = false)
         {
             if (imageContext.ProcessedBitmap.Width > 0
@@ -51,6 +49,68 @@ namespace ImageProcessor.Services
             }
             return imageContext;
         }
+
+        public ImageContext DetectPlayGround(ImageContext imageContext)
+        {
+            var newImage = imageContext.GenericImage.Convert<Rgb, byte>();
+
+            var contours = new VectorOfVectorOfPoint();
+            var potentialLicensePlates = new List<Bitmap>();
+
+            CvInvoke.FindContours(imageContext.GenericImage, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
+
+            for (var i = 0; i < contours.Size; i++)
+            {
+                var contour = contours[i];
+                var newContour = new VectorOfPoint(contour.Size);
+
+                CvInvoke.ApproxPolyDP(contour, newContour, 0.01 * CvInvoke.ArcLength(contour, true), true);
+
+                if (newContour.Size >= 4)
+                {
+                    var rect = CvInvoke.BoundingRectangle(newContour);
+
+                    var ratio = (double)rect.Width / rect.Height;
+
+                    //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56
+                    if (ratio > 2 && ratio < 5)
+                    {
+                        potentialLicensePlates.Add(CropImage(imageContext, rect));
+
+                        CvInvoke.Rectangle(newImage, rect, new MCvScalar(0, 250, 0));
+                        //CvInvoke.PutText(newImage, ratio.ToString(), newContour[0], FontFace.HersheyComplex, 0.3, new MCvScalar(0, 250, 250));
+                    }
+                }
+            }
+            
+            imageContext.PotentialLicensePlates = potentialLicensePlates;
+            imageContext.ContoursImage = newImage;
+
+            return imageContext;
+        }
+
+        public Bitmap CropImage(ImageContext imageContext, Rectangle section)
+        {
+            var newWidth = (int)Math.Ceiling(section.Width * imageContext.WidthResizeRatio);
+            var newHeight = (int)Math.Ceiling(section.Height * imageContext.HeightResizeRatio);
+
+            section.Size = new Size(newWidth, newHeight);
+            section.X = (int) Math.Ceiling(section.X * imageContext.HeightResizeRatio);
+            section.Y = (int) Math.Ceiling(section.Y * imageContext.HeightResizeRatio);
+
+            return _imageCropper.CropImage(imageContext.ProcessedBitmap, section);
+        }
+
+        public Bitmap CropImageWithoutResize(ImageContext imageContext, Rectangle section)
+        {
+            var bitmap = new Bitmap(section.Width, section.Height);
+            using (var g = Graphics.FromImage(bitmap))
+            {
+                g.DrawImage(imageContext.ProcessedBitmap, 0, 0, section, GraphicsUnit.Pixel);
+                return bitmap;
+            }
+        }
+
         #region Procesowanie własne CCL
         private void FindCCL(int[,] boolMatrix)
         {
@@ -267,7 +327,7 @@ namespace ImageProcessor.Services
                 // to nic innego jak 0 bity oddzielony 1 bitami 
                 // realizujemy podobne podejście jak w metodzie własnej
                 CvInvoke.CvtColor(matImage, proceMat, ColorConversion.Bgr2Gray);
-                CvInvoke.FindContours(proceMat, contours, null, RetrType.List, ChainApproxMethod.ChainApproxSimple);
+                CvInvoke.FindContours(proceMat, contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
 
                 if (contours.Size > 0)
                 {

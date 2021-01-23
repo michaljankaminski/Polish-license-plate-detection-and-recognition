@@ -1,107 +1,70 @@
 ﻿using Emgu.CV;
+using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using ImageProcessor.Models;
-using ImageProcessor.Services.Filters;
+using System;
 using System.Drawing;
-using System.Drawing.Imaging;
 
 namespace ImageProcessor.Services
 {
     public interface IBitmapConverter
     {
-        ImageContext ApplyGrayScale(ImageContext imageContext);
-        ImageContext ApplyGaussianBlur(ImageContext imageContext, Settings settings);
-        ImageContext ApplyNms(ImageContext imageContext, Settings settings);
         ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
     }
 
     public class BitmapConverter : IBitmapConverter
     {
-        private readonly IGaussianBlur _gaussianBlur;
-        private readonly INonMaximumSuppresion _nonMaximumSuppresion;
-
-        private static readonly ColorMatrix ColorMatrix = new ColorMatrix(
-            new[]
-            {
-                new[] {.3f, .3f, .3f, 0, 0},
-                new[] {.59f, .59f, .59f, 0, 0},
-                new[] {.11f, .11f, .11f, 0, 0},
-                new[] {0f, 0, 0, 1, 0},
-                new[] {0f, 0, 0, 0, 1}
-            });
-
-        public BitmapConverter(IGaussianBlur gaussianBlur, INonMaximumSuppresion nonMaximumSuppresion)
-        {
-            _gaussianBlur = gaussianBlur;
-            _nonMaximumSuppresion = nonMaximumSuppresion;
-        }
-
-        public ImageContext ApplyGrayScale(ImageContext imageContext)
-        {
-            imageContext.ProcessedBitmap = MakeGrayScaleAlter(imageContext.ProcessedBitmap);
-            return imageContext;
-        }
-
-        public ImageContext ApplyGaussianBlur(ImageContext imageContext, Settings settings)
-        {
-            imageContext.ProcessedBitmap = _gaussianBlur.Apply(imageContext.ProcessedBitmap, settings);
-            return imageContext;
-        }
-
-        public ImageContext ApplyNms(ImageContext imageContext, Settings settings)
-        {
-            imageContext.ProcessedBitmap = _nonMaximumSuppresion.Apply(imageContext.ProcessedBitmap, settings);
-            return imageContext;
-        }
+        private const int Width = 600;
+        private const int Height = 450;
 
         public ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
         {
             //Grayscale
             imageContext.GenericImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
 
+            //Resize
+            ResizeImage(imageContext);
+
+            var thresholds = GetThreshHold(imageContext, settings);
+
             //Gaussian
             imageContext.GenericImage = imageContext.GenericImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
 
             //Canny
-            imageContext.GenericImage = imageContext.GenericImage.Canny(settings.LowThreshold, settings.HighThreshold);
+            imageContext.GenericImage = imageContext.GenericImage.Canny(thresholds.Lower, thresholds.Upper);
 
             return imageContext;
         }
 
-        private static Bitmap MakeGrayScale(Bitmap orgImage)
+        private static void ResizeImage(ImageContext imageContext)
         {
-            var newBitmap = new Bitmap(orgImage.Width, orgImage.Height);
+            SetResizeRatio(imageContext);
 
-            for (var width = 0; width < orgImage.Width; width++)
-            for (var height = 0; height < orgImage.Height; height++)
-            {
-                var originalColor = orgImage.GetPixel(width, height);
-                var gray = (int)(originalColor.R * .3 +
-                                 originalColor.G * .59 +
-                                 originalColor.B * .11);
-
-                var newColor = Color.FromArgb(originalColor.A, gray, gray, gray);
-
-                newBitmap.SetPixel(width, height, newColor);
-            }
-
-            return newBitmap;
+            CvInvoke.Resize(imageContext.GenericImage, imageContext.GenericImage, new Size(Width, Height), interpolation: Inter.Linear);
         }
 
-        private static Bitmap MakeGrayScaleAlter(Bitmap original)
+        private static void SetResizeRatio(ImageContext imageContext)
         {
-            var newBitmap = new Bitmap(original.Width, original.Height);
+            var originalWidth = imageContext.GenericImage.Size.Width;
+            var originalHeight = imageContext.GenericImage.Size.Height;
 
-            using (var graphics = Graphics.FromImage(newBitmap))
+            imageContext.WidthResizeRatio = (double)originalWidth / Width;
+            imageContext.HeightResizeRatio = (double)originalHeight / Height;
+        }
+
+        private static (double Lower, double Upper) GetThreshHold(ImageContext imageContext, Settings settings, double sigma = 0.33)
+        {
+            if (settings.UseAutoThreshold)
             {
-                var attributes = new ImageAttributes();
+                var median = imageContext.GenericImage.GetAverage().Intensity;
 
-                attributes.SetColorMatrix(ColorMatrix);
+                var lower = Math.Max(0, (1 - sigma) * median);
+                var upper = Math.Min(255, (1 + sigma) * median);
 
-                graphics.DrawImage(original, new Rectangle(0, 0, original.Width, original.Height),
-                    0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attributes);
+                return (lower, upper);
             }
-            return newBitmap;
+
+            return (settings.LowThreshold, settings.HighThreshold);
         }
     }
 }
