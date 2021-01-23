@@ -13,7 +13,9 @@ namespace ImageProcessor.Services
 {
     public interface ILicensePlateAreaValidator
     {
-        IEnumerable<PotentialSecondLayerLicensePlate> GetLicensePlateImages(ImageContext imageContext);
+        void SetPotentialSecondLayerLicensePlates(ImageContext imageContext);
+
+        IEnumerable<PotentialSecondLayerLicensePlate> GetPotentialSecondLayerLicensePlates(ImageContext imageContext);
 
         IEnumerable<(ImageContext Image, float[] Averages)> GetHistogramAverages(IEnumerable<ImageContext> images);
     }
@@ -27,7 +29,12 @@ namespace ImageProcessor.Services
             _imageCropper = imageCropper;
         }
 
-        public IEnumerable<PotentialSecondLayerLicensePlate> GetLicensePlateImages(ImageContext imageContext)
+        public void SetPotentialSecondLayerLicensePlates(ImageContext imageContext)
+        {
+            imageContext.PotentialSecondLayerLicensePlates = GetPotentialSecondLayerLicensePlates(imageContext).ToList();
+        }
+
+        public IEnumerable<PotentialSecondLayerLicensePlate> GetPotentialSecondLayerLicensePlates(ImageContext imageContext)
         {
             return imageContext.PotentialFirstLayerLicensePlates.Where(IsLicensePlate).Select(GetConvertedImage);
         }

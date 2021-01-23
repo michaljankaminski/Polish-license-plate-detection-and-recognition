@@ -25,6 +25,8 @@ namespace ImageProcessor.Models
         public IReadOnlyList<PotentialSecondLayerLicensePlate> PotentialSecondLayerLicensePlates { get; set; }
         public IReadOnlyList<ActualLicensePlate> ActualLicensePlates { get; set; }
 
+        public Bitmap ImageWithLicenses { get; set; }
+
         public ImageContext(string filePath, Image image)
         {
             FolderPath = Path.GetDirectoryName(filePath);
@@ -48,6 +50,8 @@ namespace ImageProcessor.Models
             {
                 actualLicensePlates.Image.Dispose();
             }
+
+            ImageWithLicenses?.Dispose();
         }
     }
 }

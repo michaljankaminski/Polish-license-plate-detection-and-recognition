@@ -58,8 +58,9 @@ namespace ImageProcessor.Services
             {
                 for (var i = 0; i < image.PotentialFirstLayerLicensePlates.Count; i ++ )
                 {
-                    DeleteFileAndCreateDirectory(_imagePathProvider.GetPotentialLicensePlateFullPath(image, i));
+
                     path = _imagePathProvider.GetPotentialLicensePlateFullPath(image, i);
+                    DeleteFileAndCreateDirectory(path);
                     image.PotentialFirstLayerLicensePlates[i].Image.Save(path);
                 }
             }
@@ -68,11 +69,15 @@ namespace ImageProcessor.Services
             {
                 for (var i = 0; i < image.PotentialSecondLayerLicensePlates.Count; i++)
                 {
-                    DeleteFileAndCreateDirectory(_imagePathProvider.GetActualLicensePlateFullPath(image, i));
                     path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
+                    DeleteFileAndCreateDirectory(path);
                     image.PotentialSecondLayerLicensePlates[i].Image.Save(path);
                 }
             }
+
+            DeleteFileAndCreateDirectory(_imagePathProvider.GetFinalImageFullPath(image));
+            path = _imagePathProvider.GetFinalImageFullPath(image);
+            image.ImageWithLicenses?.Save(path);
         }
 
         private void DeleteFileAndCreateDirectory(string path)

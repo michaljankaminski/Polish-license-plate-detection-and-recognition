@@ -8,6 +8,7 @@ namespace ImageProcessor.Helpers
         string GetContoursFullPath(ImageContext imageContext);
         string GetPotentialLicensePlateFullPath(ImageContext imageContext, int number);
         string GetActualLicensePlateFullPath(ImageContext imageContext, int number);
+        string GetFinalImageFullPath(ImageContext imageContext);
     }
 
     public class ImagePathProvider : IImagePathProvider
@@ -17,5 +18,6 @@ namespace ImageProcessor.Helpers
 
         public string GetPotentialLicensePlateFullPath(ImageContext imageContext, int number) => @$"{imageContext.FolderPath}\Potential\{imageContext.FileName}\{number}.png";
         public string GetActualLicensePlateFullPath(ImageContext imageContext, int number) => @$"{imageContext.FolderPath}\Actual\{imageContext.FileName}\{number}.png";
+        public string GetFinalImageFullPath(ImageContext imageContext) => @$"{imageContext.FolderPath}\Final\{imageContext.FileName}_withLicenses.png";
     }
 }
