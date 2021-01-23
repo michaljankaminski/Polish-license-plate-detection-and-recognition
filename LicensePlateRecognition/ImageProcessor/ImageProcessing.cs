@@ -15,16 +15,19 @@ namespace ImageProcessor
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
         private readonly IRectangleDetector _rectangleDetector;
         private readonly ILicensePlateDetector _licensePlateDetector;
+        private readonly IPlateRecognizer _plateRecognizer;
 
         public ImageProcessing(
             IBitmapConverter bitmapConverter,
             IFileInputOutputHelper fileInputOutputHelper, 
             IRectangleDetector rectangleDetector, 
-            ILicensePlateDetector licensePlateDetector)
+            ILicensePlateDetector licensePlateDetector,
+            IPlateRecognizer plateRecognizer)
         {
             _bitmapConverter = bitmapConverter;
             _fileInputOutputHelper = fileInputOutputHelper;
             _rectangleDetector = rectangleDetector;
+            _plateRecognizer = plateRecognizer;
             _licensePlateDetector = licensePlateDetector;
         }
 
@@ -43,6 +46,7 @@ namespace ImageProcessor
 
                 image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
 
+                _plateRecognizer.RecognizePlate(image, false);
                 _fileInputOutputHelper.SaveImage(image, true);
             }
         }

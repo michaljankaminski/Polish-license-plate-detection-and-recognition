@@ -49,7 +49,75 @@ namespace ImageProcessor.Services
             }
             return imageContext;
         }
+        Rectangle ExpandRectangleArea(Image<Gray, byte> frm, Rectangle boundingBox, int padding)
+        {
+            Rectangle returnRect = new Rectangle(boundingBox.X - padding, boundingBox.Y - padding, boundingBox.Width + (padding * 2), boundingBox.Height + (padding * 2));
+            if (returnRect.X < 0) returnRect.X = 0;
+            if (returnRect.Y < 0) returnRect.Y = 0;
+            if (returnRect.X + returnRect.Width >= frm.Cols) returnRect.Width = frm.Cols - returnRect.X;
+            if (returnRect.Y + returnRect.Height >= frm.Rows) returnRect.Height = frm.Rows - returnRect.Y;
+            return returnRect;
+        }
+        private VectorOfPoint ScaleContour(VectorOfPoint contour, double widthRatio, double heightRatio)
+        {
+            Point[] pointsArr = new Point[contour.Size];
 
+            for (int i = 0; i < contour.Size; i++)
+            {
+                pointsArr[i] = new Point(
+                    (int)Math.Ceiling(contour[i].X * widthRatio),
+                    (int)Math.Ceiling(contour[i].Y * heightRatio));
+            }
+
+            return new VectorOfPoint(pointsArr);
+        }
+        private Image<Rgb, byte> RotateContour(Image<Rgb, byte> image, VectorOfPoint contour)
+        {
+            RotatedRect box = CvInvoke.MinAreaRect(contour);
+            if (box.Angle < -45.0)
+            {
+                float tmp = box.Size.Width;
+                box.Size.Width = box.Size.Height;
+                box.Size.Height = tmp;
+                box.Angle += 90.0f;
+            }
+            else if (box.Angle > 45.0)
+            {
+                float tmp = box.Size.Width;
+                box.Size.Width = box.Size.Height;
+                box.Size.Height = tmp;
+                box.Angle -= 90.0f;
+            }
+            using (UMat rotatedMat = new UMat())
+            using (UMat resizedMat = new UMat())
+            {
+                PointF[] srcCorners = box.GetVertices();
+                PointF[] destCorners =
+                    new PointF[]
+                    {
+                        new PointF(0, box.Size.Height - 1),
+                        new PointF(0, 0),
+                        new PointF(box.Size.Width - 1, 0),
+                        new PointF(box.Size.Width - 1, box.Size.Height - 1)
+                    };
+
+                using (Mat rot = CvInvoke.GetAffineTransform(srcCorners, destCorners))
+                    CvInvoke.WarpAffine(image, rotatedMat, rot, Size.Round(box.Size));
+
+                Size approxSize = new Size(600, 450);
+                double scale = Math.Min(approxSize.Width / box.Size.Width, approxSize.Height / box.Size.Height);
+                Size newSize = new Size((int)Math.Round(box.Size.Width * scale), (int)Math.Round(box.Size.Height * scale));
+                CvInvoke.Resize(rotatedMat, resizedMat, newSize, 0, 0, Inter.Cubic);
+
+                int edgePixelSize = 2;
+                Rectangle newRoi = new Rectangle(new Point(edgePixelSize, edgePixelSize),
+                   resizedMat.Size - new Size(2 * edgePixelSize, 2 * edgePixelSize));
+
+                UMat plate = new UMat(resizedMat, newRoi);
+
+                return plate.ToImage<Rgb, byte>();
+            }
+        }
         public ImageContext DetectPlayGround(ImageContext imageContext)
         {
             var newImage = imageContext.GenericImage.Convert<Rgb, byte>();
@@ -70,16 +138,39 @@ namespace ImageProcessor.Services
                 if (newContour.Size >= 4)
                 {
                     var rect = CvInvoke.BoundingRectangle(newContour);
-
+                    //var rect = ExpandRectangleArea(imageContext.GenericImage, basicRect, 5);
                     var ratio = (double)rect.Width / rect.Height;
 
                     //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56
-                    if (ratio > 2 && ratio < 5)
+                    if (ratio > 2 &&
+                        ratio < 5)
                     {
+
+                        var croppedImage = RotateContour(
+                            imageContext.ProcessedBitmap.ToImage<Rgb, byte>(),
+                            ScaleContour(newContour, imageContext.WidthResizeRatio, imageContext.HeightResizeRatio));
+
+                        //var croppedImage = CropImage(imageContext, rect);
                         squareContours.Add(newContour);
+                        ////
+                        ///
+                        RotatedRect box = CvInvoke.MinAreaRect(newContour);
+                        if (box.Angle < -45.0)
+                        {
+                            float tmp = box.Size.Width;
+                            box.Size.Width = box.Size.Height;
+                            box.Size.Height = tmp;
+                            box.Angle += 90.0f;
+                        }
+                        else if (box.Angle > 45.0)
+                        {
+                            float tmp = box.Size.Width;
+                            box.Size.Width = box.Size.Height;
+                            box.Size.Height = tmp;
+                            box.Angle -= 90.0f;
+                        }
 
-                        potentialLicensePlates.Add(CropImage(imageContext, rect));
-
+                        potentialLicensePlates.Add(croppedImage.ToBitmap());
                         CvInvoke.Rectangle(newImage, rect, new MCvScalar(0, 250, 0));
                         //CvInvoke.PutText(newImage, ratio.ToString(), newContour[0], FontFace.HersheyComplex, 0.3, new MCvScalar(0, 250, 250));
                     }
@@ -99,10 +190,11 @@ namespace ImageProcessor.Services
             var newHeight = (int)Math.Ceiling(section.Height * imageContext.HeightResizeRatio);
 
             section.Size = new Size(newWidth, newHeight);
-            section.X = (int) Math.Ceiling(section.X * imageContext.HeightResizeRatio);
-            section.Y = (int) Math.Ceiling(section.Y * imageContext.HeightResizeRatio);
+            section.X = (int)Math.Ceiling(section.X * imageContext.HeightResizeRatio);
+            section.Y = (int)Math.Ceiling(section.Y * imageContext.HeightResizeRatio);
 
             var bitmap = new Bitmap(newWidth, newHeight);
+            //bitmap.SetResolution(imageContext.ProcessedBitmap.VerticalResolution, imageContext.ProcessedBitmap.HorizontalResolution);
             using (var g = Graphics.FromImage(bitmap))
             {
                 g.DrawImage(imageContext.ProcessedBitmap, 0, 0, section, GraphicsUnit.Pixel);
@@ -132,16 +224,16 @@ namespace ImageProcessor.Services
             // żeby nie bawić się w sprawdzanie warunków
             // granicznych możemy od razu pominąć pierwszy
             // wiersz i kolumnę
-            for (int row = 1; row < rows-1; row++)
+            for (int row = 1; row < rows - 1; row++)
             {
-                for (int col = 1; col < cols-2; col++)
-                {   
+                for (int col = 1; col < cols - 2; col++)
+                {
                     int currentPixel = boolMatrix[row, col];
                     // Sprawdzamy czy dany piksel jest tłem
                     // czy może właściwym pikselem który nas 
                     // interesuje
-                    if (IsWhite(currentPixel) 
-                        && outputMatrix[row,col] == 0)
+                    if (IsWhite(currentPixel)
+                        && outputMatrix[row, col] == 0)
                     {
                         nextLabel++;
                         DiscoverNeighbors(row, col, boolMatrix, nextLabel);
@@ -149,7 +241,7 @@ namespace ImageProcessor.Services
                 }
             }
 
-            for(int i = 0; i < rows-1; i++)
+            for (int i = 0; i < rows - 1; i++)
             {
                 int currentPixel = boolMatrix[i, 0];
                 if (IsWhite(currentPixel)
@@ -169,7 +261,7 @@ namespace ImageProcessor.Services
                 }
             }
 
-            for(int j = 0; j < cols-1; j++)
+            for (int j = 0; j < cols - 1; j++)
             {
                 int currentPixel = boolMatrix[0, j];
                 if (IsWhite(currentPixel)
@@ -180,7 +272,7 @@ namespace ImageProcessor.Services
                 }
                 else
                 {
-                   if(boolMatrix[rows-1,j] == 1 && outputMatrix[rows-1,j] ==0)
+                    if (boolMatrix[rows - 1, j] == 1 && outputMatrix[rows - 1, j] == 0)
                     {
                         nextLabel++;
                         outputMatrix[rows - 1, j] = nextLabel;
@@ -220,9 +312,9 @@ namespace ImageProcessor.Services
             int[] rowDirection = new int[] { 1, -1, 0, 0, 1, -1, 1, -1 };
             int[] colDirection = new int[] { 0, 0, 1, -1, 1, 1, -1, -1 };
 
-            if(row > 0 && col > 0 && row < matrix.GetLength(0)-1 && col < matrix.GetLength(1)-1)
+            if (row > 0 && col > 0 && row < matrix.GetLength(0) - 1 && col < matrix.GetLength(1) - 1)
             {
-                for(int i = 0; i < 8; i++)
+                for (int i = 0; i < 8; i++)
                 {
                     int nRow = row + rowDirection[i];
                     int nCol = col + colDirection[i];
@@ -322,7 +414,7 @@ namespace ImageProcessor.Services
                 }
             }
         }
-       
+
         #endregion
         #region Procesowanie OpenCV
         private static Bitmap ProcessOpenCv(System.Drawing.Bitmap image)

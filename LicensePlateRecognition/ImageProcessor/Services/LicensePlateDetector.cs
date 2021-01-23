@@ -76,7 +76,7 @@ namespace ImageProcessor.Services
         {
             //Readable for ocr - newImg.ThresholdBinary(new Hsv(255, 0, 100), new Hsv(0, 15, 255))
             var newImg = image.ToImage<Hsv, byte>();
-
+            //return newImg;
             return newImg.ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 15, 255));
         }
     }

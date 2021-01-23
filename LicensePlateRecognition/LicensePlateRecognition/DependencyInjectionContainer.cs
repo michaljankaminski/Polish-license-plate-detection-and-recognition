@@ -2,7 +2,7 @@
 using ImageProcessor.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using ImageProcessor.Extensions;
+using ImageProcessor.Helpers;
 
 namespace ConsoleApplication
 {
@@ -12,6 +12,7 @@ namespace ConsoleApplication
         {
             return new ServiceCollection()
                 .AddSingleton<IImageProcessing, ImageProcessing>()
+                .AddScoped<IPlateRecognizer, PlateRecognizer>()
                 .AddScoped<IRectangleDetector, RectangleDetector>()
                 .AddScoped<ILicensePlateDetector, LicensePlateDetector>()
                 .AddScoped<IImagePathProvider, ImagePathProvider>()

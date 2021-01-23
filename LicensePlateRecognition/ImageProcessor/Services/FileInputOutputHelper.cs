@@ -74,7 +74,7 @@ namespace ImageProcessor.Services
                 }
             }
         }
-
+         
         private void DeleteFileAndCreateDirectory(string path)
         {
             if (File.Exists(path))
