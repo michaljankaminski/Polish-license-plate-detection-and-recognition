@@ -76,31 +76,48 @@ namespace ImageProcessor.Services
         }
         private List<(UMat, int)> FindPlateContours(Image<Hsv, byte> croppedImage, bool split = false)
         {
-            List<(UMat, int)> mats = new List<(UMat, int)>();
-            using (var characterMat = new UMat())
+            int charactersCnt = 0;
+
+            List<(UMat Mat, int Order)> mats = new List<(UMat, int)>();
             using (var bilateralMat = new Mat())
             using (var cannyMat = new Mat())
             using (var contours = new VectorOfVectorOfPoint())
             {
-                CvInvoke.BilateralFilter(croppedImage, bilateralMat, 20, 20, 10);
-                var treshold = GetThreshHold(bilateralMat.ToImage<Gray, byte>());
-                CvInvoke.Canny(croppedImage, cannyMat, treshold.Lower, treshold.Upper);
-                CvInvoke.FindContours(cannyMat.ToImage<Gray, byte>(), contours, null, RetrType.External, ChainApproxMethod.ChainApproxSimple);
-                int charactersCnt = 0;
+                CvInvoke.BilateralFilter(
+                    croppedImage, 
+                    bilateralMat, 
+                    20, 20, 10);
+
+                var treshold = BitmapConverter.GetAutomatedTreshold(bilateralMat.ToImage<Gray, byte>());
+
+                CvInvoke.Canny(
+                    croppedImage, 
+                    cannyMat, 
+                    treshold.Lower, 
+                    treshold.Upper);
+
+                CvInvoke.FindContours(
+                    cannyMat.ToImage<Gray, byte>(), 
+                    contours, 
+                    null, 
+                    RetrType.External, 
+                    ChainApproxMethod.ChainApproxSimple);
 
                 for (var i = 0; i < contours.Size; i++)
                 {
                     var contour = contours[i];
-                    var newContour = new VectorOfPoint(contour.Size);
-                    CvInvoke.ApproxPolyDP(contour, newContour, 0.01 * CvInvoke.ArcLength(contour, true), true);
+                    var smoothContour = new VectorOfPoint(contour.Size);
 
+                    CvInvoke.ApproxPolyDP(
+                        contour, 
+                        smoothContour, 
+                        0.01 * CvInvoke.ArcLength(contour, true), true);
 
-                    if (newContour.Size >= 4)
+                    if (smoothContour.Size >= 4)
                     {
-                        var rect = CvInvoke.BoundingRectangle(newContour);
+                        var rect = CvInvoke.BoundingRectangle(smoothContour);
                         double ratio = (double)rect.Width / rect.Height;
                         double area = rect.Width * (double)rect.Height;
-                        //CvInvoke.Rectangle(croppedImage, rect, new MCvScalar(0, 250, 0));
 
                         if (ratio <= 1.5 &&
                             ratio >= 0.01 &&
@@ -108,8 +125,8 @@ namespace ImageProcessor.Services
                         {
                             if (split)
                             {
-                                UMat ROI = new UMat(croppedImage.Convert<Gray, byte>().ToUMat(), rect);
-                                mats.Add((ROI, rect.X));
+                                UMat potentialCharArea = new UMat(croppedImage.Convert<Gray, byte>().ToUMat(), rect);
+                                mats.Add((potentialCharArea, rect.X));
                             }
                             else
                                 CvInvoke.Rectangle(croppedImage, rect, new MCvScalar(0, 250, 0));
@@ -122,15 +139,12 @@ namespace ImageProcessor.Services
 
                 if (!split)
                     mats.Add((croppedImage.ToUMat(), 0));
-                if (charactersCnt > 3)
-                    return mats.OrderBy(a => a.Item2).ToList();
+                if (charactersCnt > 4)
+                    return mats.OrderBy(a => a.Order).ToList();
             }
             return default;
         }
-        private UMat CropUmat(UMat mat)
-        {
-            throw new NotImplementedException();
-        }
+
         private string RecognizeNumber(UMat imgWithNumber, PageSegMode pageMode = PageSegMode.SingleChar)
         {
             Emgu.CV.OCR.Tesseract.Character[] characters;
@@ -159,8 +173,8 @@ namespace ImageProcessor.Services
                         licensePlateNumber.Append(characters[i].Text);
 
                 }
-                string number = licensePlateNumber.ToString();
-                return number;
+
+                return licensePlateNumber.ToString();
             }
         }
         /// <summary>
@@ -190,15 +204,6 @@ namespace ImageProcessor.Services
             if (licensePlate.Length >= 7 &&
                 numberMatch.IsMatch(licensePlate[0].ToString()))
                 licensePlate = licensePlate.Remove(0);
-        }
-        private (double Lower, double Upper) GetThreshHold(Image<Gray, byte> image, double sigma = 0.33)
-        {
-            var median = image.GetAverage().Intensity;
-
-            var lower = Math.Max(0, (1 - sigma) * median);
-            var upper = Math.Min(255, (1 + sigma) * median);
-
-            return (lower, upper);
         }
     }
 }

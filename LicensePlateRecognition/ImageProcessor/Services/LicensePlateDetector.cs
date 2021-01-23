@@ -73,8 +73,8 @@ namespace ImageProcessor.Services
             var rectangle = new Rectangle(
                 Convert.ToInt32(0.3 * image.Width),
                 Convert.ToInt32(0.3 * image.Height),
-                Convert.ToInt32(0.4 * image.Width),
-                Convert.ToInt32(0.4 * image.Height));
+                Convert.ToInt32(0.6 * image.Width),
+                Convert.ToInt32(0.6 * image.Height));
 
             var cutImage = _imageCropper.CropImage(image, rectangle).ToImage<Rgb, byte>();
             var bgrPlanes = new VectorOfMat();

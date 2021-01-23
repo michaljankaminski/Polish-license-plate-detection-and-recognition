@@ -9,5 +9,9 @@
         public bool UseAutoThreshold { get; set; } = true;
         public double LowThreshold { get; set; } = 50;
         public double HighThreshold { get; set; } = 150;//200
+
+        public static int ResizeWidth { get; } = 600;
+        public static int ResizeHeight { get; } = 450;
+    
     }
 }

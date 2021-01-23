@@ -9,62 +9,57 @@ namespace ImageProcessor.Services
 {
     public interface IBitmapConverter
     {
-        ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
+        void ApplyFullCannyOperator(ImageContext imageContext, Settings settings);
     }
 
     public class BitmapConverter : IBitmapConverter
     {
-        private const int Width = 600;
-        private const int Height = 450;
-
-        public ImageContext ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
+        public void ApplyFullCannyOperator(ImageContext imageContext, Settings settings)
         {
             //Grayscale
-            imageContext.GenericImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
-
+            var processedImage = imageContext.ProcessedBitmap.ToImage<Gray, byte>();
             //Resize
-            ResizeImage(imageContext);
-
-            var thresholds = GetThreshHold(imageContext, settings);
-
+            ResizeImage(imageContext, processedImage);
+            var thresholds = GetThreshHold(processedImage, settings);
             //Gaussian
-            imageContext.GenericImage = imageContext.GenericImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
-
+            processedImage = processedImage.SmoothGaussian(settings.KernelSize, settings.KernelSize, settings.Sigma, settings.Sigma);
             //Canny
-            imageContext.GenericImage = imageContext.GenericImage.Canny(thresholds.Lower, thresholds.Upper);
+            processedImage = processedImage.Canny(thresholds.Lower, thresholds.Upper);
 
-            return imageContext;
+            imageContext.GenericImage = processedImage;
         }
 
-        private static void ResizeImage(ImageContext imageContext)
+        private static void ResizeImage(ImageContext imageContext, Image<Gray, byte> image)
         {
-            SetResizeRatio(imageContext);
+            SetResizeRatio(imageContext, image);
 
-            CvInvoke.Resize(imageContext.GenericImage, imageContext.GenericImage, new Size(Width, Height), interpolation: Inter.Linear);
+            CvInvoke.Resize(image, image, new Size(Settings.ResizeWidth, Settings.ResizeHeight), interpolation: Inter.Linear);
         }
 
-        private static void SetResizeRatio(ImageContext imageContext)
+        private static void SetResizeRatio(ImageContext imageContext, Image<Gray,byte> image)
         {
-            var originalWidth = imageContext.GenericImage.Size.Width;
-            var originalHeight = imageContext.GenericImage.Size.Height;
+            var originalWidth = image.Size.Width;
+            var originalHeight = image.Size.Height;
 
-            imageContext.WidthResizeRatio = (double)originalWidth / Width;
-            imageContext.HeightResizeRatio = (double)originalHeight / Height;
+            imageContext.WidthResizeRatio = (double)originalWidth / Settings.ResizeWidth;
+            imageContext.HeightResizeRatio = (double)originalHeight / Settings.ResizeHeight;
         }
 
-        private static (double Lower, double Upper) GetThreshHold(ImageContext imageContext, Settings settings, double sigma = 0.33)
+        private static (double Lower, double Upper) GetThreshHold(Image<Gray, byte> image, Settings settings, double sigma = 0.33)
         {
-            if (settings.UseAutoThreshold)
-            {
-                var median = imageContext.GenericImage.GetAverage().Intensity;
+            return
+                settings.UseAutoThreshold
+                ? GetAutomatedTreshold(image, sigma)
+                : (settings.LowThreshold, settings.HighThreshold);
+        }
+        public static (double Lower, double Upper) GetAutomatedTreshold(Image<Gray, byte> image, double sigma = 0.33)
+        {
+            var median = image.GetAverage().Intensity;
 
-                var lower = Math.Max(0, (1 - sigma) * median);
-                var upper = Math.Min(255, (1 + sigma) * median);
+            var lower = Math.Max(0, (1 - sigma) * median);
+            var upper = Math.Min(255, (1 + sigma) * median);
 
-                return (lower, upper);
-            }
-
-            return (settings.LowThreshold, settings.HighThreshold);
+            return (lower, upper);
         }
     }
 }

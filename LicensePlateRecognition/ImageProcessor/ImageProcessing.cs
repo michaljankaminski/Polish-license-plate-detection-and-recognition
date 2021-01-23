@@ -38,7 +38,7 @@ namespace ImageProcessor
             foreach (var image in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
             {
                 _bitmapConverter.ApplyFullCannyOperator(image, settings);
-                _rectangleDetector.DetectPlayGround(image);
+                _rectangleDetector.Detect(image);
 
                 image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
 
