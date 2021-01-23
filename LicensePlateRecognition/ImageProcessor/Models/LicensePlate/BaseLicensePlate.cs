@@ -1,4 +1,5 @@
-﻿using System.Drawing;
+﻿using System;
+using System.Drawing;
 
 namespace ImageProcessor.Models.LicensePlate
 {
@@ -9,6 +10,15 @@ namespace ImageProcessor.Models.LicensePlate
         protected BaseLicensePlate(Rectangle position)
         {
             Position = position;
+        }
+
+        public Rectangle GetFullyScaledRectangle(ImageContext imageContext)
+        {
+            return new(
+                (int) Math.Ceiling(Position.X * imageContext.WidthResizeRatio),
+                (int) Math.Ceiling(Position.Y * imageContext.HeightResizeRatio),
+                (int) Math.Ceiling(Position.Width * imageContext.WidthResizeRatio),
+                (int) Math.Ceiling(Position.Height * imageContext.HeightResizeRatio));
         }
     }
 }

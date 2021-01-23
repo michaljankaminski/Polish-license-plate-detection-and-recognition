@@ -83,7 +83,7 @@ namespace ImageProcessor.Services
 
             imageContext.ActualLicensePlates = foundPlates;
         }
-        private List<(UMat, int)> FindPlateContours(Image<Gray, byte> croppedImage, bool split = false)
+        private List<(UMat, int)> FindPlateContours(Image<Hsv, byte> croppedImage, bool split = false)
         {
             int charactersCnt = 0;
 
@@ -106,7 +106,7 @@ namespace ImageProcessor.Services
                     treshold.Upper);
 
                 CvInvoke.FindContours(
-                    cannyMat,
+                    cannyMat.ToImage<Gray, byte>(),
                     contours,
                     null,
                     RetrType.External,
@@ -178,6 +178,7 @@ namespace ImageProcessor.Services
 
                 using (UMat tmp = imgWithNumber.Clone())
                 {
+                    tmp.Save(@"D:\OCR\test.png");
                     ocr.SetImage(tmp);
                     ocr.Recognize();
                     characters = ocr.GetCharacters();

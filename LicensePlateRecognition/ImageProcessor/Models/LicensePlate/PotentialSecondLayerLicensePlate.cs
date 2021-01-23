@@ -5,9 +5,9 @@ namespace ImageProcessor.Models.LicensePlate
 {
     public class PotentialSecondLayerLicensePlate : BaseLicensePlate
     {
-        public Image<Gray, byte> Image { get; set; }
+        public Image<Hsv, byte> Image { get; set; }
 
-        public PotentialSecondLayerLicensePlate(PotentialFirstLayerLicensePlate potentialLicensePlateFirstLayer, Image<Gray, byte> image) : base(potentialLicensePlateFirstLayer.Position)
+        public PotentialSecondLayerLicensePlate(PotentialFirstLayerLicensePlate potentialLicensePlateFirstLayer, Image<Hsv, byte> image) : base(potentialLicensePlateFirstLayer.Position)
         {
             Image = image;
         }

@@ -16,12 +16,16 @@ namespace ImageProcessor.Services
         {
             var image = imageContext.OriginalBitmap.ToImage<Rgb, byte>();
 
-            var color = new MCvScalar(0, 250, 0);
+            var color = new MCvScalar(0, 255, 0);
 
             foreach (var actualLicensePlate in imageContext.ActualLicensePlates)
             {
-                CvInvoke.Rectangle(image, actualLicensePlate.Position, color);
-                CvInvoke.PutText(image, actualLicensePlate.PlateNumber, actualLicensePlate.Position.Location, FontFace.HersheySimplex, 3, color);
+                var position = actualLicensePlate.GetFullyScaledRectangle(imageContext);
+
+                CvInvoke.Rectangle(image, position, color, 2);
+
+                position.Y -= 5;
+                CvInvoke.PutText(image, actualLicensePlate.PlateNumber, position.Location, FontFace.HersheyTriplex, 1, color,2);
             }
 
             imageContext.ImageWithLicenses = image.ToBitmap();

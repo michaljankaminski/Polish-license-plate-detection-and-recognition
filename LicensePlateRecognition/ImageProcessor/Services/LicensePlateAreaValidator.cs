@@ -142,8 +142,7 @@ namespace ImageProcessor.Services
         {
             var newImg = licensePlate.Image
                 .Convert<Hsv, byte>()
-                .ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 15, 255))
-                .Convert<Gray, byte>();
+                .ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 0, 255));
 
             return new PotentialSecondLayerLicensePlate(licensePlate, newImg);
         }
