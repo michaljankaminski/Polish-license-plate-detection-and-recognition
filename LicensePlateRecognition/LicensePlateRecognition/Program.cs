@@ -16,7 +16,7 @@ namespace ConsoleApplication
 
             var settings = new Settings
             {
-                ImagesPath = "c:/dev/verifedOriginal"
+                ImagesPath = @"c:\dev\small"
             };
             scope.ServiceProvider.GetRequiredService<IImageProcessing>().Process(settings);
 

@@ -7,28 +7,36 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using ImageProcessor.Helpers;
+using ImageProcessor.Models.LicensePlate;
 
 namespace ImageProcessor.Services
 {
-    public interface ILicensePlateDetector
+    public interface ILicensePlateAreaValidator
     {
-        IEnumerable<Image<Hsv, byte>> GetLicensePlateImages(ImageContext imageContext);
+        void SetPotentialSecondLayerLicensePlates(ImageContext imageContext);
+
+        IEnumerable<PotentialSecondLayerLicensePlate> GetPotentialSecondLayerLicensePlates(ImageContext imageContext);
 
         IEnumerable<(ImageContext Image, float[] Averages)> GetHistogramAverages(IEnumerable<ImageContext> images);
     }
 
-    public class LicensePlateDetector : ILicensePlateDetector
+    public class LicensePlateAreaValidator : ILicensePlateAreaValidator
     {
         private readonly IImageCropper _imageCropper;
 
-        public LicensePlateDetector(IImageCropper imageCropper)
+        public LicensePlateAreaValidator(IImageCropper imageCropper)
         {
             _imageCropper = imageCropper;
         }
 
-        public IEnumerable<Image<Hsv, byte>> GetLicensePlateImages(ImageContext imageContext)
+        public void SetPotentialSecondLayerLicensePlates(ImageContext imageContext)
         {
-            return imageContext.PotentialLicensePlates.Where(IsLicensePlate).Select(GetConvertedImage);
+            imageContext.PotentialSecondLayerLicensePlates = GetPotentialSecondLayerLicensePlates(imageContext).ToList();
+        }
+
+        public IEnumerable<PotentialSecondLayerLicensePlate> GetPotentialSecondLayerLicensePlates(ImageContext imageContext)
+        {
+            return imageContext.PotentialFirstLayerLicensePlates.Where(IsLicensePlate).Select(GetConvertedImage);
         }
 
         public IEnumerable<(ImageContext Image, float[] Averages)> GetHistogramAverages(IEnumerable<ImageContext> images)
@@ -36,12 +44,12 @@ namespace ImageProcessor.Services
             foreach (var image in images)
             {
                 var section = new Rectangle(
-                    Convert.ToInt32(0.3 * image.ProcessedBitmap.Width),
-                    Convert.ToInt32(0.3 * image.ProcessedBitmap.Height),
-                    Convert.ToInt32(0.4 * image.ProcessedBitmap.Width),
-                    Convert.ToInt32(0.4 * image.ProcessedBitmap.Height));
+                    Convert.ToInt32(0.3 * image.OriginalBitmap.Width),
+                    Convert.ToInt32(0.3 * image.OriginalBitmap.Height),
+                    Convert.ToInt32(0.4 * image.OriginalBitmap.Width),
+                    Convert.ToInt32(0.4 * image.OriginalBitmap.Height));
 
-                var rgbImage = _imageCropper.CropImage(image.ProcessedBitmap, section).ToImage<Rgb, byte>();
+                var rgbImage = _imageCropper.CropImage(image.OriginalBitmap, section).ToImage<Rgb, byte>();
 
                 var bgrPlanes = new VectorOfMat();
                 CvInvoke.Split(rgbImage, bgrPlanes);
@@ -62,21 +70,21 @@ namespace ImageProcessor.Services
                 var gAvg = GetHistogramAttributes(gHist);
                 var bAvg = GetHistogramAttributes(bHist);
 
-                image.GenericImage = rgbImage.Convert<Gray, byte>();
+                image.ProcessedImage = rgbImage.Convert<Gray, byte>();
 
                 yield return (image, new[] {bAvg.Average, gAvg.Average, rAvg.Average });
             }
         }
 
-        private bool IsLicensePlate(Bitmap image)
+        private bool IsLicensePlate(PotentialFirstLayerLicensePlate licensePlate)
         {
             var rectangle = new Rectangle(
-                Convert.ToInt32(0.3 * image.Width),
-                Convert.ToInt32(0.3 * image.Height),
-                Convert.ToInt32(0.4 * image.Width),
-                Convert.ToInt32(0.4 * image.Height));
+                Convert.ToInt32(0.3 * licensePlate.Image.Width),
+                Convert.ToInt32(0.3 * licensePlate.Image.Height),
+                Convert.ToInt32(0.6 * licensePlate.Image.Width),
+                Convert.ToInt32(0.6 * licensePlate.Image.Height));
 
-            var cutImage = _imageCropper.CropImage(image, rectangle).ToImage<Rgb, byte>();
+            var cutImage = _imageCropper.CropImage(licensePlate.Image.ToBitmap(), rectangle).ToImage<Rgb, byte>();
             var bgrPlanes = new VectorOfMat();
             CvInvoke.Split(cutImage, bgrPlanes);
 
@@ -96,7 +104,10 @@ namespace ImageProcessor.Services
             var gAvg = GetHistogramAttributes(gHist);
             var rAvg = GetHistogramAttributes(rHist);
 
-            return IsMeanWhiteLike(bAvg.Average, bAvg.IsMostlyWhite) && IsMeanWhiteLike(gAvg.Average, gAvg.IsMostlyWhite) && IsMeanWhiteLike(rAvg.Average, rAvg.IsMostlyWhite);
+            return 
+                IsMeanWhiteLike(bAvg.Average, bAvg.IsMostlyWhite) &&
+                IsMeanWhiteLike(gAvg.Average, gAvg.IsMostlyWhite) &&
+                IsMeanWhiteLike(rAvg.Average, rAvg.IsMostlyWhite);
         }
 
         private static bool IsMeanWhiteLike(float average, bool isMostlyWhite)
@@ -127,12 +138,13 @@ namespace ImageProcessor.Services
             return (sum / sumWeight, (sumOverLowerBoundry / sumWeight > 0.5f));
         }
 
-        private Image<Hsv, byte> GetConvertedImage(Bitmap image)
+        private PotentialSecondLayerLicensePlate GetConvertedImage(PotentialFirstLayerLicensePlate licensePlate)
         {
-            //Readable for ocr - newImg.ThresholdBinary(new Hsv(255, 0, 100), new Hsv(0, 15, 255))
-            var newImg = image.ToImage<Hsv, byte>();
+            var newImg = licensePlate.Image
+                .Convert<Hsv, byte>()
+                .ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 0, 255));
 
-            return newImg.ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 15, 255));
+            return new PotentialSecondLayerLicensePlate(licensePlate, newImg);
         }
     }
 }

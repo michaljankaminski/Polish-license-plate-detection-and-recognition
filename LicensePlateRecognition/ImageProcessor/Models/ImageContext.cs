@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using ImageProcessor.Models.LicensePlate;
 
 namespace ImageProcessor.Models
 {
@@ -16,37 +17,41 @@ namespace ImageProcessor.Models
         public double WidthResizeRatio { get; set; }
         public double HeightResizeRatio { get; set; }
 
-        public Bitmap ProcessedBitmap { get; set; }
-        public Image<Gray, byte> GenericImage { get; set; }
+        public Bitmap OriginalBitmap { get; set; }
+        public Image<Gray, byte> ProcessedImage { get; set; }
         public Image<Rgb, byte> ContoursImage { get; set; }
 
-        public IReadOnlyList<Bitmap> PotentialLicensePlates { get; set; }
-        public IReadOnlyList<Image<Hsv, byte>> ActualLicensePlates { get; set; }
-        public IReadOnlyList<string> FoundLicensePlates { get; set; }
+        public IReadOnlyList<PotentialFirstLayerLicensePlate> PotentialFirstLayerLicensePlates { get; set; }
+        public IReadOnlyList<PotentialSecondLayerLicensePlate> PotentialSecondLayerLicensePlates { get; set; }
+        public IReadOnlyList<ActualLicensePlate> ActualLicensePlates { get; set; }
+
+        public Bitmap ImageWithLicenses { get; set; }
 
         public ImageContext(string filePath, Image image)
         {
             FolderPath = Path.GetDirectoryName(filePath);
             FileName = Path.GetFileNameWithoutExtension(filePath);
             FileType = Enum.Parse<FileType>(Path.GetExtension(filePath).Substring(1),true);
-            ProcessedBitmap = new Bitmap(image);
+            OriginalBitmap = new Bitmap(image);
         }
 
         public void Dispose()
         {
-            GenericImage?.Dispose();
-            ProcessedBitmap?.Dispose();
+            ProcessedImage?.Dispose();
+            OriginalBitmap?.Dispose();
             ContoursImage?.Dispose();
 
-            foreach (var potentialLicensePlate in PotentialLicensePlates)
+            foreach (var potentialLicensePlate in PotentialFirstLayerLicensePlates)
             {
-                potentialLicensePlate.Dispose();
+                potentialLicensePlate.Image.Dispose();
             }
 
-            foreach (var actualLicensePlates in ActualLicensePlates)
+            foreach (var actualLicensePlates in PotentialSecondLayerLicensePlates)
             {
-                actualLicensePlates.Dispose();
+                actualLicensePlates.Image.Dispose();
             }
+
+            ImageWithLicenses?.Dispose();
         }
     }
 }

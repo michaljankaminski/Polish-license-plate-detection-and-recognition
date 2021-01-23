@@ -1,52 +1,73 @@
-﻿using System.Linq;
-using ImageProcessor.Models;
+﻿using ImageProcessor.Models;
 using ImageProcessor.Services;
+using System.Drawing;
 
 namespace ImageProcessor
 {
     public interface IImageProcessing
     {
         void Process(Settings settings);
+        Bitmap Process(string filePath, Settings settings = null);
     }
 
     public class ImageProcessing : IImageProcessing
     {
-        private readonly IBitmapConverter _bitmapConverter;
+        private readonly IImageConverter _imageConverter;
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
-        private readonly IRectangleDetector _rectangleDetector;
-        private readonly ILicensePlateDetector _licensePlateDetector;
-        private readonly IPlateRecognizer _plateRecognizer;
+        private readonly ILicensePlateAreaDetector _licensePlateAreaDetector;
+        private readonly ILicensePlateAreaValidator _licensePlateAreaValidator;
+        private readonly ILicensePlateReader _licensePlateReader;
+        private readonly ILicensePlateImageBuilder _licensePlateImageBuilder;
 
         public ImageProcessing(
-            IBitmapConverter bitmapConverter,
+            IImageConverter imageConverter,
             IFileInputOutputHelper fileInputOutputHelper, 
-            IRectangleDetector rectangleDetector, 
-            ILicensePlateDetector licensePlateDetector,
-            IPlateRecognizer plateRecognizer)
+            ILicensePlateAreaDetector licensePlateAreaDetector, 
+            ILicensePlateAreaValidator licensePlateAreaValidator,
+            ILicensePlateReader licensePlateReader, 
+            ILicensePlateImageBuilder licensePlateImageBuilder)
         {
-            _bitmapConverter = bitmapConverter;
+            _imageConverter = imageConverter;
             _fileInputOutputHelper = fileInputOutputHelper;
-            _rectangleDetector = rectangleDetector;
-            _licensePlateDetector = licensePlateDetector;
-            _plateRecognizer = plateRecognizer;
+            _licensePlateAreaDetector = licensePlateAreaDetector;
+            _licensePlateAreaValidator = licensePlateAreaValidator;
+            _licensePlateReader = licensePlateReader;
+            _licensePlateImageBuilder = licensePlateImageBuilder;
         }
 
         public void Process(Settings settings)
         {
             var imagesPath = settings.ImagesPath;
 
-            foreach (var image in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
+            foreach (var imageContext in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
             {
-                _bitmapConverter.ApplyFullCannyOperator(image, settings);
-                _rectangleDetector.DetectPlayGround(image);
-
-                image.ActualLicensePlates = _licensePlateDetector.GetLicensePlateImages(image).ToList();
-
-                _plateRecognizer.RecognizePlate(image, false);
-                _fileInputOutputHelper.SaveImage(image, true);
-
-                image.Dispose();
+                ProcessSingleImage(imageContext, settings);
+                _fileInputOutputHelper.SaveImage(imageContext);
+                imageContext.Dispose();
             }
+        }
+
+        public Bitmap Process(string filePath, Settings settings = null)
+        {
+            if (settings == null)
+            {
+                settings = new Settings();
+            }
+
+            var imageContext = _fileInputOutputHelper.ReadImage(filePath);
+
+            return ProcessSingleImage(imageContext, settings);
+        }
+
+        private Bitmap ProcessSingleImage(ImageContext imageContext, Settings settings)
+        {
+            _imageConverter.ApplyFullCannyOperator(imageContext, settings);
+            _licensePlateAreaDetector.Detect(imageContext);
+            _licensePlateAreaValidator.SetPotentialSecondLayerLicensePlates(imageContext);
+            _licensePlateReader.RecognizePlate(imageContext, false);
+            _licensePlateImageBuilder.Build(imageContext);
+
+            return imageContext.ImageWithLicenses;
         }
     }
 }
