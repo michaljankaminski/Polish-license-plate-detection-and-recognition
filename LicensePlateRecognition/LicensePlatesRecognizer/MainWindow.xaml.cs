@@ -27,10 +27,12 @@ namespace LicensePlatesRecognizer
     {
         private readonly string _fileFilter = "Image files (*.jpg)|*.jpg|*.png|*.jpeg";
         private readonly IImageProcessing _imageProcessing;
+        private string _filePath = "";
         public MainWindow(IImageProcessing imageProcessing)
         {
             _imageProcessing = imageProcessing;
             InitializeComponent();
+            loaderImg.Visibility = Visibility.Hidden;
         }
 
         private void OpenFile_Click(object sender, RoutedEventArgs e)
@@ -47,14 +49,28 @@ namespace LicensePlatesRecognizer
                 imgFormat.Text = $"{initialBmp.Format.BitsPerPixel} bpp";
                 imgHeight.Text = initialBmp.Height.ToString();
                 imgWidth.Text = initialBmp.Width.ToString();
-
+                imgPalette.Text = initialBmp.PixelWidth.ToString();
                 orgPhotoContainer.Source = initialBmp;
-
-                Task.Run(() =>
-                {
-                    DetectPlate(filePath);
-                });
+                _filePath = filePath;
+                
             }
+        }
+        private void StartProcessing_Click(object sender, RoutedEventArgs e)
+        {
+            if(!String.IsNullOrEmpty(_filePath))
+            {
+                MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("Are you sure?", "Process confirmation", System.Windows.MessageBoxButton.YesNo);
+                if (messageBoxResult == MessageBoxResult.Yes)
+                {
+                    loaderImg.Visibility = Visibility.Visible;
+                    Task.Run(() =>
+                    {
+                        DetectPlate(_filePath);
+                    });
+                }
+                    
+            }
+            
         }
         private void DetectPlate(string filePath)
         {
@@ -64,6 +80,7 @@ namespace LicensePlatesRecognizer
             this.Dispatcher.Invoke(() =>
             {
                 outPhotoContainer.Source = outBitmapImage;
+                loaderImg.Visibility = Visibility.Hidden;
             });
         }
 
@@ -86,5 +103,7 @@ namespace LicensePlatesRecognizer
             }
         }
         #endregion
+
+      
     }
 }

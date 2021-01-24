@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:LicensePlatesRecognizer"
+        xmlns:local="clr-namespace:LicensePlatesRecognizer" xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
         Title="MainWindow" Height="600" Width="890">
     <DockPanel>
@@ -23,8 +23,8 @@
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="1*"></RowDefinition>
-                <RowDefinition Height="10*"></RowDefinition>
-                <RowDefinition Height="9*"></RowDefinition>
+                <RowDefinition Height="15*"></RowDefinition>
+                <RowDefinition Height="6*"></RowDefinition>
             </Grid.RowDefinitions>
 
             <Label Margin="10,2,0,0" Height="23" Name="Label1" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Left">
@@ -32,6 +32,9 @@
             </Label>
             <Button Margin="0,5,10,0"  VerticalAlignment="Stretch" Name="BrowseButton" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Width="95" Click="OpenFile_Click" >
                 Browse
+            </Button>
+            <Button Margin="0,5,10,0"  VerticalAlignment="Stretch" Name="StartProcessing" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Right" Width="95" Click="StartProcessing_Click"  >
+                Detect
             </Button>
 
             <GroupBox Header="Original Image" Grid.Column="0" Grid.Row="1" Margin="10">
@@ -41,6 +44,8 @@
             </GroupBox>
             <GroupBox Header="Output image" Grid.Column="1" Grid.Row="1" Margin="10">
                 <Grid>
+                    <fa:ImageAwesome Icon="CircleOutlineNotch" x:Name="loaderImg" Spin="True" SpinDuration="1" Margin="50" />
+
                     <Image Margin="20" Name="outPhotoContainer" Stretch="UniformToFill"  />
                 </Grid>
             </GroupBox>
@@ -63,12 +68,15 @@
                     <TextBlock VerticalAlignment="Center" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image width: </TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image height:</TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image format:</TextBlock>
-                    <TextBlock VerticalAlignment="Center" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image palette:</TextBlock>
+                    <TextBlock VerticalAlignment="Center" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Pixel width:</TextBlock>
+                    <TextBlock VerticalAlignment="Center" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >File path:</TextBlock>
 
                     <TextBlock VerticalAlignment="Center" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgWidth"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgHeight"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgFormat"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgPalette"></TextBlock>
+                    <TextBlock VerticalAlignment="Center" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgPath"></TextBlock>
+
 
                 </Grid>
             </GroupBox>
