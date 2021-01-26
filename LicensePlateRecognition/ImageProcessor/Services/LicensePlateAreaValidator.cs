@@ -43,105 +43,96 @@ namespace ImageProcessor.Services
         {
             foreach (var image in images)
             {
-                var section = new Rectangle(
-                    Convert.ToInt32(0.3 * image.OriginalBitmap.Width),
-                    Convert.ToInt32(0.3 * image.OriginalBitmap.Height),
-                    Convert.ToInt32(0.4 * image.OriginalBitmap.Width),
-                    Convert.ToInt32(0.4 * image.OriginalBitmap.Height));
+                var croppedImage = GetCroppedImage(image.OriginalBitmap);
+                var avgs = GetHistogramAverages(croppedImage);
 
-                var rgbImage = _imageCropper.CropImage(image.OriginalBitmap, section).ToImage<Rgb, byte>();
+                image.ProcessedImage = croppedImage.Convert<Gray, byte>();
 
-                var bgrPlanes = new VectorOfMat();
-                CvInvoke.Split(rgbImage, bgrPlanes);
-
-                var histSize = new[] { 256 };
-                var range = new[] { 0f, 255f };
-                var accumulate = false;
-
-                var bHist = new Mat();
-                var gHist = new Mat();
-                var rHist = new Mat();
-
-                CvInvoke.CalcHist(bgrPlanes, new[] { 0 }, new Mat(), rHist, histSize, range, accumulate);
-                CvInvoke.CalcHist(bgrPlanes, new[] { 1 }, new Mat(), gHist, histSize, range, accumulate);
-                CvInvoke.CalcHist(bgrPlanes, new[] { 2 }, new Mat(), bHist, histSize, range, accumulate);
-
-                var rAvg = GetHistogramAttributes(rHist);
-                var gAvg = GetHistogramAttributes(gHist);
-                var bAvg = GetHistogramAttributes(bHist);
-
-                image.ProcessedImage = rgbImage.Convert<Gray, byte>();
-
-                yield return (image, new[] {bAvg.Average, gAvg.Average, rAvg.Average });
+                yield return (image, new[] { avgs.SatAverage, avgs.ValAverage });
             }
+        }
+
+        private Image<Hsv, byte> GetCroppedImage(Bitmap image)
+        {
+            var rectangle = new Rectangle(
+                Convert.ToInt32(0.4 * image.Width),
+                Convert.ToInt32(0.4 * image.Height),
+                Convert.ToInt32(0.3 * image.Width),
+                Convert.ToInt32(0.3 * image.Height));
+
+            return _imageCropper.CropImage(image, rectangle).ToImage<Hsv, byte>();
+        }
+
+        private (float SatAverage, float ValAverage) GetHistogramAverages(Image<Hsv, byte> image)
+        {
+            image._EqualizeHist();
+
+            var hsvPlanes = new VectorOfMat();
+            CvInvoke.Split(image, hsvPlanes);
+
+            var histSize = new[] { 256 };
+            var range = new[] { 0f, 255f };
+            var accumulate = false;
+
+            var sHist = new Mat();
+            var vHist = new Mat();
+
+            CvInvoke.CalcHist(hsvPlanes, new[] { 1 }, new Mat(), sHist, histSize, range, accumulate);
+            CvInvoke.CalcHist(hsvPlanes, new[] { 2 }, new Mat(), vHist, histSize, range, accumulate);
+
+            var sAvg = GetHistogramAverage(sHist);
+            var vAvg = GetHistogramAverage(vHist);
+
+            return (sAvg, vAvg);
         }
 
         private bool IsLicensePlate(PotentialFirstLayerLicensePlate licensePlate)
         {
-            var rectangle = new Rectangle(
-                Convert.ToInt32(0.3 * licensePlate.Image.Width),
-                Convert.ToInt32(0.3 * licensePlate.Image.Height),
-                Convert.ToInt32(0.6 * licensePlate.Image.Width),
-                Convert.ToInt32(0.6 * licensePlate.Image.Height));
+            var croppedImage = GetCroppedImage(licensePlate.Image.ToBitmap());
 
-            var cutImage = _imageCropper.CropImage(licensePlate.Image.ToBitmap(), rectangle).ToImage<Rgb, byte>();
-            var bgrPlanes = new VectorOfMat();
-            CvInvoke.Split(cutImage, bgrPlanes);
+            var avgs = GetHistogramAverages(croppedImage);
 
-            var histSize = new[] { 256 };
-            var range = new[] { 0f, 255f};
-            var accumulate = false;
-
-            var bHist = new Mat();
-            var gHist = new Mat();
-            var rHist = new Mat();
-
-            CvInvoke.CalcHist(bgrPlanes, new[] { 2 }, new Mat(), bHist, histSize, range, accumulate);
-            CvInvoke.CalcHist(bgrPlanes, new[] { 1 }, new Mat(), gHist, histSize, range, accumulate);
-            CvInvoke.CalcHist(bgrPlanes, new[] { 0 }, new Mat(), rHist, histSize, range, accumulate);
-
-            var bAvg = GetHistogramAttributes(bHist);
-            var gAvg = GetHistogramAttributes(gHist);
-            var rAvg = GetHistogramAttributes(rHist);
-
-            return 
-                IsMeanWhiteLike(bAvg.Average, bAvg.IsMostlyWhite) &&
-                IsMeanWhiteLike(gAvg.Average, gAvg.IsMostlyWhite) &&
-                IsMeanWhiteLike(rAvg.Average, rAvg.IsMostlyWhite);
+            return IsSaturationInRange(avgs.SatAverage) && IsValueInRange(avgs.ValAverage);
         }
 
-        private static bool IsMeanWhiteLike(float average, bool isMostlyWhite)
+        private static bool IsSaturationInRange(float saturationAverage)
         {
-            return (average > 110 && average < 205) && isMostlyWhite;
+            return saturationAverage > 120 && saturationAverage < 145;
         }
 
-        private static (float Average, bool IsMostlyWhite) GetHistogramAttributes(Mat mat)
+        private static bool IsValueInRange(float valueAverage)
         {
-            const int lowerBoundy = 150;
-            var sumOverLowerBoundry = 0;
+            return valueAverage > 100 && valueAverage < 200;
+        }
+
+        private static float GetHistogramAverage(Mat mat)
+        {
             var sumWeight = 0f;
             var sum = 0f;
             var values = mat.GetData();
 
             for (int i = 0; i < values.Length; i++)
             {
-                var value = (float) mat.GetData().GetValue(i, 0);
-                sumWeight += value;
-                sum += i * value;
+                var value = (float)mat.GetData().GetValue(i, 0);
 
-                if (i >= lowerBoundy)
+                if (!float.IsNaN(value))
                 {
-                    sumOverLowerBoundry += Convert.ToInt32(value);
+                    sumWeight += value;
+                    sum += i * value;
                 }
             }
 
-            return (sum / sumWeight, (sumOverLowerBoundry / sumWeight > 0.5f));
+            return sumWeight == 0 ? 0 : sum / sumWeight;
         }
 
         private PotentialSecondLayerLicensePlate GetConvertedImage(PotentialFirstLayerLicensePlate licensePlate)
         {
-            var newImg = licensePlate.Image
-                .Convert<Hsv, byte>()
+            using var bitMap = licensePlate.Image.ToBitmap();
+
+            ImageConverter.SetContrast(bitMap, 15);
+
+            var newImg = bitMap
+                .ToImage<Hsv, byte>()
                 .ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 0, 255));
 
             return new PotentialSecondLayerLicensePlate(licensePlate, newImg);

@@ -1,3 +1,4 @@
+using System;
 using ImageProcessor.Helpers;
 using ImageProcessor.Models;
 using ImageProcessor.Services;
@@ -29,18 +30,21 @@ namespace ImageProcessorTests
         public void GetLicensesHistogramAverages()
         {
             var path = @"C:\dev\licenseplates";
+            //path = @"C:\dev\notlicense";
 
             var images = _fileInputOutputHelper.ReadImages(path, FileType.png);
 
             var avgByImage = _licensePlateAreaValidator.GetHistogramAverages(images).ToList();
 
-            var lowestRedAvg = avgByImage.Min(x => x.Averages[0]);
-            var lowestGreenAvg = avgByImage.Min(x => x.Averages[1]);
-            var lowestBlueAvg = avgByImage.Min(x => x.Averages[2]);
+            var avgs = avgByImage.Select(x => x.Averages).Where(x=> x[0] > 0 && x[1] > 0).ToList();
 
-            var highestRedAvg = avgByImage.Max(x => x.Averages[0]);
-            var highestGreenAvg = avgByImage.Max(x => x.Averages[1]);
-            var highestBlueAvg = avgByImage.Max(x => x.Averages[2]);
+            var lowestSatAvg = avgs.Min(x => x[0]);
+            var meanSatAvg = avgs.Average(x => x[0]);
+            var highestSatAvg = avgs.Max(x => x[0]);
+
+            var lowestValueAvg = avgs.Min(x => x[1]);
+            var meanValueAvg = avgs.Average(x => x[1]);
+            var highestValueAvg = avgs.Max(x => x[1]);
 
             int w = 1;
 
