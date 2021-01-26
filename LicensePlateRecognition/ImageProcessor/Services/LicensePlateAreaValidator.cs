@@ -129,11 +129,15 @@ namespace ImageProcessor.Services
         {
             using var bitMap = licensePlate.Image.ToBitmap();
 
+            var hsvImag = bitMap
+                .ToImage<Hsv, byte>();
+
+            //hsvImag._EqualizeHist();
+
             ImageConverter.SetContrast(bitMap, 15);
 
-            var newImg = bitMap
-                .ToImage<Hsv, byte>()
-                .ThresholdBinary(new Hsv(360, 0, 100), new Hsv(0, 0, 255));
+            var newImg = hsvImag
+                .ThresholdBinary(new Hsv(360, 0, 95), new Hsv(0, 0, 255));
 
             return new PotentialSecondLayerLicensePlate(licensePlate, newImg);
         }

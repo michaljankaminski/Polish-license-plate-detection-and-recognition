@@ -43,61 +43,57 @@ namespace ImageProcessor.Services
         public void SaveImage(ImageContext image, bool deleteIfExist = false)
         {
             var path = _imagePathProvider.GetProcessedFullPath(image);
-            DeleteFileAndCreateDirectory(path);
+            CreateDirectory(path);
 
             image.ProcessedImage?.Save(path);
 
             if (image.ContoursImage != null)
             {
                 path = _imagePathProvider.GetContoursFullPath(image);
-                DeleteFileAndCreateDirectory(path);
+                CreateDirectory(path);
                 image.ContoursImage.Save(path);
             }
 
             if (image.PotentialFirstLayerLicensePlates?.Count > 0)
             {
+                CreateDirectory(_imagePathProvider.GetPotentialLicensePlateFullPath(image, -1));
+
                 for (var i = 0; i < image.PotentialFirstLayerLicensePlates.Count; i ++ )
                 {
-
                     path = _imagePathProvider.GetPotentialLicensePlateFullPath(image, i);
-                    DeleteFileAndCreateDirectory(path);
                     image.PotentialFirstLayerLicensePlates[i].Image.Save(path);
                 }
             }
 
             if (image.PotentialSecondLayerLicensePlates?.Count > 0)
             {
+                CreateDirectory(_imagePathProvider.GetPotentialLicensePlate2FullPath(image, -1));
+
                 for (var i = 0; i < image.PotentialSecondLayerLicensePlates.Count; i++)
                 {
                     path = _imagePathProvider.GetPotentialLicensePlate2FullPath(image, i);
-                    DeleteFileAndCreateDirectory(path);
                     image.PotentialSecondLayerLicensePlates[i].Image.Save(path);
                 }
             }
             if (image.ActualLicensePlates?.Count > 0)
             {
+                CreateDirectory(_imagePathProvider.GetActualLicensePlateFullPath(image, -1));
+
                 for (var i = 0; i < image.ActualLicensePlates.Count; i++)
                 {
                     path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
-                    DeleteFileAndCreateDirectory(path);
                     image.ActualLicensePlates[i].Image.Save(path);
                 }
             }
 
-            DeleteFileAndCreateDirectory(_imagePathProvider.GetFinalImageFullPath(image));
+            CreateDirectory(_imagePathProvider.GetFinalImageFullPath(image));
             path = _imagePathProvider.GetFinalImageFullPath(image);
             image.ImageWithLicenses?.Save(path);
         }
 
-        private void DeleteFileAndCreateDirectory(string path)
+        private static void CreateDirectory(string path)
         {
-            if (File.Exists(path))
-            {
-                File.Move(path, path + "_old");
-                File.Delete(path + "_old");
-            }
-
-            Directory.CreateDirectory(Path.GetDirectoryName(path));
+            Directory.CreateDirectory(Path.GetDirectoryName(path) ?? string.Empty);
         }
     }
 }

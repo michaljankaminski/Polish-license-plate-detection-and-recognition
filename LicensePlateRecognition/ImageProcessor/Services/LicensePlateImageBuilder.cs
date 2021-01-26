@@ -16,6 +16,15 @@ namespace ImageProcessor.Services
         {
             var image = imageContext.OriginalBitmap.ToImage<Rgb, byte>();
 
+            //var color = new MCvScalar(255, 0, 0);
+
+            //foreach (var actualLicensePlate in imageContext.PotentialSecondLayerLicensePlates)
+            //{
+            //    var position = actualLicensePlate.GetFullyScaledRectangle(imageContext);
+
+            //    CvInvoke.Rectangle(image, position, color);
+            //}
+
             var color = new MCvScalar(0, 255, 0);
 
             foreach (var actualLicensePlate in imageContext.ActualLicensePlates)

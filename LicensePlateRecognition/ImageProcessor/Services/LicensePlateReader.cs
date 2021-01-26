@@ -7,7 +7,6 @@ using ImageProcessor.Models;
 using ImageProcessor.Models.LicensePlate;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -22,16 +21,15 @@ namespace ImageProcessor.Services
         /// plates numbers and rectangle areas on which they were found. 
         /// </summary>
         /// <param name="imageContext">Segmented image</param>
-        void RecognizePlate(ImageContext imageContext, bool useTesseract = true);
+        void RecognizePlate(ImageContext imageContext);
     }
     /// <inheritdoc cref="ILicensePlateReader" />
     public class LicensePlateReader : ILicensePlateReader
     {
         private readonly IDictionary<string, string> _ocrParams;
-        private readonly IImageConverter _imageConverter;
-        public LicensePlateReader(IImageConverter imageConverter)
+
+        public LicensePlateReader()
         {
-            _imageConverter = imageConverter;
             _ocrParams = new Dictionary<string, string>
             {
                 { "TEST_DATA_PATH", "D:\\OCR\\"},
@@ -39,16 +37,13 @@ namespace ImageProcessor.Services
                 { "WHITE_LIST", "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 " }
             };
         }
-        public void RecognizePlate(ImageContext imageContext, bool useTesseract = true)
-        {
-            RecognizePlate(imageContext);
-        }
+
         /// <summary>
         /// Performs potential number recognition by splitting 
         /// the number into single characters
         /// </summary>
         /// <param name="imageContext">Context of the image</param>
-        private void RecognizePlate(ImageContext imageContext)
+        public void RecognizePlate(ImageContext imageContext)
         {
             var actualLicensePlates = new List<ActualLicensePlate>();
 
@@ -170,7 +165,7 @@ namespace ImageProcessor.Services
             Tesseract.Character[] characters;
 
             StringBuilder licensePlateNumber = new StringBuilder();
-            using (var ocr = new Emgu.CV.OCR.Tesseract())
+            using (var ocr = new Tesseract())
             {
                 ocr.Init(
                     _ocrParams["TEST_DATA_PATH"],
@@ -241,11 +236,11 @@ namespace ImageProcessor.Services
                     characters = characters[0..^1].Trim();
 
                 if (
-                    characters.Where(a => Char.IsLetter(a)).Count() > 5 ||
-                    characters.Where(a => Char.IsNumber(a)).Count() > 5 ||
-                    characters.Where(a => Char.IsNumber(a)).Count() < 1 ||
-                    characters.Where(a => Char.IsLetter(a)).Count() < 2 ||
-                    characters.Where(a => Char.IsWhiteSpace(a)).Count() >= 2)
+                    characters.Count(Char.IsLetter) > 5 ||
+                    characters.Count(Char.IsNumber) > 5 ||
+                    characters.Count(Char.IsNumber) < 1 ||
+                    characters.Count(Char.IsLetter) < 2 ||
+                    characters.Count(Char.IsWhiteSpace) >= 2)
                     return false;
 
                 if (characters.Replace(" ", "").Length < 9 &&
@@ -255,7 +250,7 @@ namespace ImageProcessor.Services
 
             return false;
         }
-        private void DisplayFoundPlates(List<ActualLicensePlate> plates, string imageName)
+        private static void DisplayFoundPlates(IEnumerable<ActualLicensePlate> plates, string imageName)
         {
             foreach (var foundPlate in plates)
                 Console.WriteLine($"Image: {imageName}, Number: {foundPlate.PlateNumber} ");

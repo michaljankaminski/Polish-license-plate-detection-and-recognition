@@ -1,22 +1,12 @@
-﻿using Microsoft.Win32;
+﻿using ImageProcessor;
+using Microsoft.Win32;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using ImageProcessor;
-using System.Drawing;
-using System.IO;
-using System.Drawing.Imaging;
 
 namespace LicensePlatesRecognizer
 {
@@ -25,7 +15,7 @@ namespace LicensePlatesRecognizer
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly string _fileFilter = "Image files (*.jpg)|*.jpg|*.png|*.jpeg";
+        private const string FileFilter = "Image files (*.jpg)|*.jpg|*.png|*.jpeg";
         private readonly IImageProcessing _imageProcessing;
         private string _filePath = "";
         public MainWindow(IImageProcessing imageProcessing)
@@ -39,7 +29,7 @@ namespace LicensePlatesRecognizer
         {
             OpenFileDialog dlg = new OpenFileDialog();
             dlg.InitialDirectory = "c:\\";
-            dlg.Filter = "";
+            dlg.Filter = FileFilter;
             dlg.RestoreDirectory = true;
 
             if (dlg.ShowDialog() == true)
@@ -59,7 +49,7 @@ namespace LicensePlatesRecognizer
         {
             if(!String.IsNullOrEmpty(_filePath))
             {
-                MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("Are you sure?", "Process confirmation", System.Windows.MessageBoxButton.YesNo);
+                MessageBoxResult messageBoxResult = MessageBox.Show("Are you sure?", "Process confirmation", System.Windows.MessageBoxButton.YesNo);
                 if (messageBoxResult == MessageBoxResult.Yes)
                 {
                     outPhotoContainer.Source = null;
@@ -76,7 +66,10 @@ namespace LicensePlatesRecognizer
         private void DetectPlate(string filePath)
         {
             var outImage = _imageProcessing.Process(filePath);
+
             var outBitmapImage = ToBitmapImage(outImage);
+
+            outImage.Dispose();
 
             this.Dispatcher.Invoke(() =>
             {

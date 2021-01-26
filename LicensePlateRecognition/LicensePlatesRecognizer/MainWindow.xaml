@@ -69,13 +69,11 @@
                     <TextBlock VerticalAlignment="Center" Grid.Row="1" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image height:</TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Image format:</TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >Pixel width:</TextBlock>
-                    <TextBlock VerticalAlignment="Center" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Right" Margin="0,0,20,0" >File path:</TextBlock>
 
                     <TextBlock VerticalAlignment="Center" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgWidth"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgHeight"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgFormat"></TextBlock>
                     <TextBlock VerticalAlignment="Center" Grid.Row="3" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgPalette"></TextBlock>
-                    <TextBlock VerticalAlignment="Center" Grid.Row="4" Grid.Column="1" HorizontalAlignment="Center" Margin="0,0,20,0" x:Name="imgPath"></TextBlock>
 
 
                 </Grid>

@@ -4,6 +4,7 @@ using Emgu.CV.Structure;
 using ImageProcessor.Models;
 using System;
 using System.Drawing;
+using ImageProcessor.Helpers;
 
 namespace ImageProcessor.Services
 {
