@@ -46,7 +46,12 @@ namespace ImageProcessor.Models
                 potentialLicensePlate.Image.Dispose();
             }
 
-            foreach (var actualLicensePlates in PotentialSecondLayerLicensePlates)
+            foreach (var potentialLicensePlate in PotentialSecondLayerLicensePlates)
+            {
+                potentialLicensePlate.Image.Dispose();
+            }
+
+            foreach (var actualLicensePlates in ActualLicensePlates)
             {
                 actualLicensePlates.Image.Dispose();
             }

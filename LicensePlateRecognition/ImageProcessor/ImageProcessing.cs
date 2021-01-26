@@ -1,6 +1,7 @@
 ﻿using ImageProcessor.Models;
 using ImageProcessor.Services;
 using System.Drawing;
+using System.Threading.Tasks;
 
 namespace ImageProcessor
 {
@@ -38,13 +39,23 @@ namespace ImageProcessor
         public void Process(Settings settings)
         {
             var imagesPath = settings.ImagesPath;
+            var images = _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg);
 
-            foreach (var imageContext in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
+            var options = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = 16
+            };
+
+            Parallel.ForEach(images, options,(imageContext) =>
             {
                 ProcessSingleImage(imageContext, settings);
                 _fileInputOutputHelper.SaveImage(imageContext);
                 imageContext.Dispose();
-            }
+            });
+            //    foreach (var imageContext in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
+            //{
+
+            //}
         }
 
         public Bitmap Process(string filePath, Settings settings = null)
