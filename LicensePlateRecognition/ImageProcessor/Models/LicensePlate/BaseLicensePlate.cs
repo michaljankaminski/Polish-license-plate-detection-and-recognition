@@ -14,7 +14,7 @@ namespace ImageProcessor.Models.LicensePlate
 
         public Rectangle GetFullyScaledRectangle(ImageContext imageContext)
         {
-            return new(
+            return new Rectangle(
                 (int) Math.Ceiling(Position.X * imageContext.WidthResizeRatio),
                 (int) Math.Ceiling(Position.Y * imageContext.HeightResizeRatio),
                 (int) Math.Ceiling(Position.Width * imageContext.WidthResizeRatio),
