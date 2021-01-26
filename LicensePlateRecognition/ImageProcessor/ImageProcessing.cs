@@ -7,7 +7,17 @@ namespace ImageProcessor
 {
     public interface IImageProcessing
     {
+        /// <summary>
+        /// Process full license plate detection on images which are set in settings.ImagesPath. Images with license plate filled will be located in source destination.
+        /// </summary>
+        /// <param name="settings"> Settings for license plate detection. </param>
         void Process(Settings settings);
+        /// <summary>
+        /// Process full license plate detection
+        /// </summary>
+        /// <param name="filePath"> Full image path. File can be of type .jpg, .png or .bmp</param>
+        /// <param name="settings"> Settings for license plate detection. </param>
+        /// <returns> Bitmap with license plates </returns>
         Bitmap Process(string filePath, Settings settings = null);
     }
 
