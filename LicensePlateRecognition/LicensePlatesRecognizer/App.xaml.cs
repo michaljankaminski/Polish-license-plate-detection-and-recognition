@@ -28,11 +28,12 @@ namespace LicensePlatesRecognizer
         {
             services.AddSingleton<IImageProcessing, ImageProcessing>();
             services.AddSingleton<IImageCropper, ImageCropper>();
-            services.AddSingleton<IPlateRecognizer, PlateRecognizer>();
-            services.AddScoped<IRectangleDetector, RectangleDetector>();
-            services.AddScoped<ILicensePlateDetector, LicensePlateDetector>();
+            services.AddSingleton<ILicensePlateReader, LicensePlateReader>();
+            services.AddScoped<ILicensePlateAreaDetector, LicensePlateAreaDetector>();
+            services.AddScoped<ILicensePlateAreaValidator, LicensePlateAreaValidator>();
             services.AddScoped<IImagePathProvider, ImagePathProvider>();
-            services.AddScoped<IBitmapConverter, BitmapConverter>();
+            services.AddScoped<IImageConverter, ImageConverter>();
+            services.AddScoped<ILicensePlateImageBuilder, LicensePlateImageBuilder>();
             services.AddScoped<IFileInputOutputHelper, FileInputOutputHelper>();
             services.AddSingleton<MainWindow>();
         }

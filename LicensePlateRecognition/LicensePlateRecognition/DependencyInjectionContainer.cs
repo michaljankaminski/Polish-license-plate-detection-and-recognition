@@ -13,7 +13,7 @@ namespace ConsoleApplication
             return new ServiceCollection()
                 .AddSingleton<IImageProcessing, ImageProcessing>()
                 .AddScoped<IImageCropper, ImageCropper>()
-                .AddScoped<ILicensePlateReader, LicenseLicensePlateReader>()
+                .AddScoped<ILicensePlateReader, LicensePlateReader>()
                 .AddScoped<ILicensePlateAreaDetector, LicensePlateAreaDetector>()
                 .AddScoped<ILicensePlateAreaValidator, LicensePlateAreaValidator>()
                 .AddScoped<ILicensePlateImageBuilder, LicensePlateImageBuilder>()

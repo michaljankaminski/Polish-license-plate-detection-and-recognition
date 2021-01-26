@@ -22,11 +22,11 @@ namespace ImageProcessor.Services
         /// <param name="imageContext">Segmented image</param>
         void RecognizePlate(ImageContext imageContext, bool useTesseract = true);
     }
-    public class LicenseLicensePlateReader : ILicensePlateReader
+    public class LicensePlateReader : ILicensePlateReader
     {
         private readonly IDictionary<string, string> _ocrParams;
         private readonly IImageConverter _imageConverter;
-        public LicenseLicensePlateReader(IImageConverter imageConverter)
+        public LicensePlateReader(IImageConverter imageConverter)
         {
             _imageConverter = imageConverter;
             _ocrParams = new Dictionary<string, string>
@@ -53,7 +53,7 @@ namespace ImageProcessor.Services
                 if (platesArea != null)
                 {
                     string potentialNumber = RecognizeNumber(platesArea.First().Item1, PageSegMode.SingleBlock);
-                    if (ValidateCharactersSet(potentialNumber))
+                    if (ValidateCharactersSet(ref potentialNumber))
                     {
                         Console.WriteLine($"{imageContext.FileName}: {potentialNumber}");
                         actualLicensePlates.Add(new ActualLicensePlate(potentialLicensePlate, potentialNumber));
@@ -145,7 +145,6 @@ namespace ImageProcessor.Services
                     }
                 }
 
-
                 if (!split)
                     mats.Add((croppedImage.ToUMat(), 0));
                 if (charactersCnt > 4)
@@ -178,14 +177,12 @@ namespace ImageProcessor.Services
 
                 using (UMat tmp = imgWithNumber.Clone())
                 {
-                    tmp.Save(@"D:\OCR\test.png");
                     ocr.SetImage(tmp);
                     ocr.Recognize();
                     characters = ocr.GetCharacters();
 
                     for (int i = 0; i < characters.Length; i++)
                         licensePlateNumber.Append(characters[i].Text);
-
                 }
 
                 return licensePlateNumber.ToString();
@@ -197,27 +194,41 @@ namespace ImageProcessor.Services
         /// </summary>
         /// <param name="characters">Set of characters</param>
         /// <returns>Validation status</returns>
-        private static bool ValidateCharactersSet(string characters)
+        private static bool ValidateCharactersSet(ref string characters)
         {
-            characters = characters.Replace(" ", "");
-            if (characters.Length == 0)
-                return false;
-            else if (characters.Length >= 6 &&
-                characters.Length < 9)
-                return true;
-            else
-                return false;
-        }
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="licensePlate"></param>
-        private static void ParseLicensePlate(string licensePlate)
-        {
-            Regex numberMatch = new Regex("[0-9]");
-            if (licensePlate.Length >= 7 &&
-                numberMatch.IsMatch(licensePlate[0].ToString()))
-                licensePlate = licensePlate.Remove(0);
+            char[] deniedFirstCharacters =
+                new char[] { 'A', 'H', 'I', 'J', 'M', 'U', 'V', 'Y' };
+
+            string firstLetterSpaceMatch = @"^[A-z]{1} [A-z]{1}[A-z0-9 ]*$";
+
+            characters = characters.Trim();
+            if (!String.IsNullOrEmpty(characters))
+            {
+                if (Char.IsNumber(characters[0]) ||
+                    Regex.IsMatch(characters, firstLetterSpaceMatch))
+                    characters = characters[1..].Trim();
+
+                if (!String.IsNullOrEmpty(characters) &&
+                    deniedFirstCharacters.Contains(characters[0]))
+                    characters = characters[1..].Trim();
+
+                if (characters.Length == 9)
+                    characters = characters[0..^1].Trim();
+
+                if (
+                    characters.Where(a => Char.IsLetter(a)).Count() > 5 ||
+                    characters.Where(a => Char.IsNumber(a)).Count() > 5 ||
+                    characters.Where(a => Char.IsNumber(a)).Count() < 3 ||
+                    characters.Where(a => Char.IsLetter(a)).Count() < 2)
+                    return false;
+
+                if (characters.Replace(" ","").Length < 9 &&
+                    characters.Replace(" ","").Length > 5)
+                    return true;
+            }
+
+            return false;
         }
     }
 }
+

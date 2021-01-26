@@ -62,6 +62,7 @@ namespace LicensePlatesRecognizer
                 MessageBoxResult messageBoxResult = System.Windows.MessageBox.Show("Are you sure?", "Process confirmation", System.Windows.MessageBoxButton.YesNo);
                 if (messageBoxResult == MessageBoxResult.Yes)
                 {
+                    outPhotoContainer.Source = null;
                     loaderImg.Visibility = Visibility.Visible;
                     Task.Run(() =>
                     {
