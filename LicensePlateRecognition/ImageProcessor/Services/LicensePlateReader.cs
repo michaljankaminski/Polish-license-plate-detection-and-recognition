@@ -41,7 +41,6 @@ namespace ImageProcessor.Services
         }
         public void RecognizePlate(ImageContext imageContext, bool useTesseract = true)
         {
-            //RecognizePlateWithSplit(imageContext);
             RecognizePlate(imageContext);
         }
         /// <summary>
@@ -60,50 +59,25 @@ namespace ImageProcessor.Services
                 var platesArea = FindPlateContours(potentialLicensePlate.Image, false);
                 if (platesArea != null)
                 {
-
                     string potentialNumber = RecognizeNumber(platesArea, PageSegMode.SingleBlock);
                     if (ValidateCharactersSet(ref potentialNumber))
                     {
-                        Console.WriteLine($"{imageContext.FileName}: {potentialNumber}");
+                        var similarPlateNumber = actualLicensePlates
+                            .FirstOrDefault(a => potentialNumber.Contains(a.PlateNumber));
 
-                        actualLicensePlates.Add(new ActualLicensePlate(potentialLicensePlate, potentialNumber, platesArea.ToImage<Hsv,byte>()));
+                        if (actualLicensePlates.FirstOrDefault(a => a.PlateNumber.Contains(potentialNumber)) == null)
+                        {
+                            if (similarPlateNumber != null)
+                                actualLicensePlates.Remove(similarPlateNumber);
+
+                            actualLicensePlates.Add(new ActualLicensePlate(potentialLicensePlate, potentialNumber, platesArea.ToImage<Hsv, byte>()));
+                        }
                     }
-                    //string potentialNumber = RecognizeNumber(platesArea.First().Item1, PageSegMode.SingleBlock);
-                    //if (ValidateCharactersSet(ref potentialNumber))
-                    //{
-                    //    Console.WriteLine($"{imageContext.FileName}: {potentialNumber}");
-                    //    actualLicensePlates.Add(new ActualLicensePlate(potentialLicensePlate, potentialNumber));
-                    //}
                 }
             }
 
+            DisplayFoundPlates(actualLicensePlates, imageContext.FileName);
             imageContext.ActualLicensePlates = actualLicensePlates;
-        }
-        /// <summary>
-        /// Performs potential number recognition without 
-        /// splitting it into single characters array. Only
-        /// character segmentation is being applied.
-        /// </summary>
-        /// <param name="imageContext">Context of the image</param>
-        private void RecognizePlateWithSplit(ImageContext imageContext)
-        {
-            _ocrParams["TEST_DATA_LANG"] = "lplate+mf";
-
-            List<ActualLicensePlate> foundPlates = new List<ActualLicensePlate>();
-
-            foreach (var image in imageContext.PotentialSecondLayerLicensePlates)
-            {
-                List<string> plateNumber = new List<string>();
-                var characterAreas = FindPlateContours(image.Image, true);
-                //if (characterAreas != null)
-                //    foreach (var character in characterAreas)
-                //        plateNumber.Add(RecognizeNumber(character.Item1, PageSegMode.SingleChar));
-
-                if (plateNumber.Count > 5)
-                    Console.WriteLine($"{imageContext.FileName}: {String.Join("", plateNumber)}");
-            }
-
-            imageContext.ActualLicensePlates = foundPlates;
         }
         /// <summary>
         /// From a given cropped image looks for single characters contours. 
@@ -119,19 +93,18 @@ namespace ImageProcessor.Services
         /// <returns></returns>
         private Mat FindPlateContours(Image<Hsv, byte> croppedImage, bool split = false)
         {
-            int charactersCnt = 0;
-
-            List<(UMat Mat, int Order)> mats = new List<(UMat, int)>();
             using (var bilateralMat = new Mat())
             using (var cannyMat = new Mat())
             using (var contours = new VectorOfVectorOfPoint())
             {
-                CvInvoke.BilateralFilter(
-                    croppedImage,
-                    bilateralMat,
-                    20, 20, 10);
-
                 var treshold = ImageConverter.GetAutomatedTreshold(bilateralMat.ToImage<Gray, byte>());
+                var cleanMat = new Mat(croppedImage.Rows, croppedImage.Cols, DepthType.Cv8U, 1);
+                cleanMat.SetTo(new MCvScalar(255));
+
+                CvInvoke.BilateralFilter(
+                  croppedImage,
+                  bilateralMat,
+                  20, 20, 10);
 
                 CvInvoke.Canny(
                     croppedImage,
@@ -145,10 +118,6 @@ namespace ImageProcessor.Services
                     null,
                     RetrType.External,
                     ChainApproxMethod.ChainApproxSimple);
-
-                var cleanMat = new Mat(cannyMat.Rows, cannyMat.Cols, DepthType.Cv8U, 1);
-                cleanMat.SetTo(new MCvScalar(255));
-
 
                 for (var i = 0; i < contours.Size; i++)
                 {
@@ -167,33 +136,21 @@ namespace ImageProcessor.Services
                         double area = rect.Width * (double)rect.Height;
 
                         if (ratio <= 1.5 &&
-                            ratio >= 0.06 &&
+                            ratio >= 0.1 &&
                             area >= 400)
                         {
                             Mat ROI = new Mat(cleanMat, rect);
                             Mat potentialCharArea = new Mat(croppedImage.Convert<Gray, byte>().Mat, rect);
-
                             potentialCharArea.CopyTo(ROI);
-
-                            //if (split)
-                            //{
-                            //   
-
-                            //    //UMat potentialCharArea = new UMat(croppedImage.Convert<Gray, byte>().ToUMat(), rect);
-                            //    //mats.Add((potentialCharArea, rect.X));
-                            //}
-                            //else
-                            //    CvInvoke.Rectangle(croppedImage, rect, new MCvScalar(0, 250, 0));
-
-                            charactersCnt++;
+                            // w celach analizy dokładamy wartości ratio
+                            CvInvoke.Rectangle(croppedImage, rect, new MCvScalar(0, 250, 0));
+                            CvInvoke.PutText(croppedImage, Math.Round(ratio, 3).ToString(), rect.Location, FontFace.HersheyDuplex, fontScale: 0.5d, new MCvScalar(0, 250, 0));
                         }
                     }
                 }
 
                 return cleanMat;
-
             }
-            return default;
         }
         /// <summary>
         /// Recognize the license plate number from a given image
@@ -226,7 +183,6 @@ namespace ImageProcessor.Services
 
                 ocr.SetVariable
                     ("user_defined_dpi", "70");
-
 
                 ocr.PageSegMode = pageMode;
 
@@ -280,7 +236,7 @@ namespace ImageProcessor.Services
                     deniedFirstCharacters.Contains(characters[0]))
                     characters = characters[1..].Trim();
 
-                if (characters.Length == 9 ||
+                if (characters.Replace(" ", "").Length == 9 ||
                     Regex.IsMatch(characters, lastLetterSpaceMatch))
                     characters = characters[0..^1].Trim();
 
@@ -288,7 +244,8 @@ namespace ImageProcessor.Services
                     characters.Where(a => Char.IsLetter(a)).Count() > 5 ||
                     characters.Where(a => Char.IsNumber(a)).Count() > 5 ||
                     characters.Where(a => Char.IsNumber(a)).Count() < 1 ||
-                    characters.Where(a => Char.IsLetter(a)).Count() < 2)
+                    characters.Where(a => Char.IsLetter(a)).Count() < 2 ||
+                    characters.Where(a => Char.IsWhiteSpace(a)).Count() >= 2)
                     return false;
 
                 if (characters.Replace(" ", "").Length < 9 &&
@@ -297,6 +254,11 @@ namespace ImageProcessor.Services
             }
 
             return false;
+        }
+        private void DisplayFoundPlates(List<ActualLicensePlate> plates, string imageName)
+        {
+            foreach (var foundPlate in plates)
+                Console.WriteLine($"Image: {imageName}, Number: {foundPlate.PlateNumber} ");
         }
     }
 }
