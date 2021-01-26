@@ -69,9 +69,18 @@ namespace ImageProcessor.Services
             {
                 for (var i = 0; i < image.PotentialSecondLayerLicensePlates.Count; i++)
                 {
-                    path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
+                    path = _imagePathProvider.GetPotentialLicensePlate2FullPath(image, i);
                     DeleteFileAndCreateDirectory(path);
                     image.PotentialSecondLayerLicensePlates[i].Image.Save(path);
+                }
+            }
+            if (image.ActualLicensePlates?.Count > 0)
+            {
+                for (var i = 0; i < image.ActualLicensePlates.Count; i++)
+                {
+                    path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
+                    DeleteFileAndCreateDirectory(path);
+                    image.ActualLicensePlates[i].Image.Save(path);
                 }
             }
 

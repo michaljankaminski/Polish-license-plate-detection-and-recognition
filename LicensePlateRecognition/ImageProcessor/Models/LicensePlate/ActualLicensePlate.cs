@@ -8,10 +8,11 @@ namespace ImageProcessor.Models.LicensePlate
         public string PlateNumber { get; set; }
         public Image<Hsv, byte> Image { get; set; }
 
-        public ActualLicensePlate(PotentialSecondLayerLicensePlate potentialLicensePlate, string plateNumber) : base(potentialLicensePlate.Position)
+        public ActualLicensePlate(PotentialSecondLayerLicensePlate potentialLicensePlate, string plateNumber, Image<Hsv, byte> cleanedLicensePlate) : base(potentialLicensePlate.Position)
         {
             PlateNumber = plateNumber;
-            Image = potentialLicensePlate.Image;
+            //Image = potentialLicensePlate.Image;
+            Image = cleanedLicensePlate;
         }
     }
 }
