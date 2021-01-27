@@ -73,22 +73,22 @@ namespace ImageProcessor
 
             var imageContext = _fileInputOutputHelper.ReadImage(filePath);
 
-            return ProcessSingleImage(imageContext, settings);
-        }
-
-        private Bitmap ProcessSingleImage(ImageContext imageContext, Settings settings)
-        {
-            _imageConverter.ApplyFullCannyOperator(imageContext, settings);
-            _licensePlateAreaDetector.Detect(imageContext);
-            _licensePlateAreaValidator.SetPotentialSecondLayerLicensePlates(imageContext);
-            _licensePlateReader.RecognizePlate(imageContext);
-            _licensePlateImageBuilder.Build(imageContext);
+            ProcessSingleImage(imageContext, settings);
 
             var finalImage = (Bitmap)imageContext.ImageWithLicenses.Clone();
 
             imageContext.Dispose();
 
             return finalImage;
+        }
+
+        private void ProcessSingleImage(ImageContext imageContext, Settings settings)
+        {
+            _imageConverter.ApplyFullCannyOperator(imageContext, settings);
+            _licensePlateAreaDetector.Detect(imageContext);
+            _licensePlateAreaValidator.SetPotentialSecondLayerLicensePlates(imageContext);
+            _licensePlateReader.RecognizePlate(imageContext);
+            _licensePlateImageBuilder.Build(imageContext);
         }
     }
 }
