@@ -13,7 +13,7 @@ namespace ImageProcessor.Services
     public interface ILicensePlateAreaDetector
     {
         /// <summary>
-        /// Detects the rectangles from given image context
+        /// Detects the rectangles (contours) from given image context
         /// </summary>
         /// <remarks>
         /// Processes the image after initial preparation, such as 
@@ -32,11 +32,12 @@ namespace ImageProcessor.Services
             var contoursImage = imageContext.ProcessedImage.Convert<Rgb, byte>();
             var potentialLicensePlates = new List<PotentialFirstLayerLicensePlate>();
 
+            // Finding contours on canny processed image
             CvInvoke.FindContours(
                 imageContext.ProcessedImage,
                 contours,
                 null,
-                RetrType.External,
+                RetrType.Tree,
                 ChainApproxMethod.ChainApproxSimple);
 
             for (var i = 0; i < contours.Size; i++)
@@ -44,6 +45,7 @@ namespace ImageProcessor.Services
                 var contour = contours[i];
                 var smoothContour = new VectorOfPoint(contour.Size);
 
+                // Smoothing the contours
                 CvInvoke.ApproxPolyDP(
                     contour,
                     smoothContour,
@@ -52,13 +54,16 @@ namespace ImageProcessor.Services
 
                 if (smoothContour.Size >= 4)
                 {
+                    // Bulding rectangle out of the contour
                     var rect = CvInvoke.BoundingRectangle(smoothContour);
+
                     var ratio = (double)rect.Width / rect.Height;
 
-                    //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56
+                    //Standard polish license plate has dimensions //520x114 so the ratio is around 4.56. Due to possible angle the range is much larger
                     if (ratio > 2 &&
                         ratio < 5)
                     {
+                        // Scalling the image
                         var croppedImage = RotateContour(
                            imageContext.OriginalBitmap.ToImage<Rgb, byte>(),
                            ScaleContour(smoothContour, imageContext.WidthResizeRatio, imageContext.HeightResizeRatio));
@@ -75,15 +80,7 @@ namespace ImageProcessor.Services
         }
 
         #region HELPERS
-        private Rectangle ExpandRectangleArea(Image<Gray, byte> frm, Rectangle boundingBox, int padding)
-        {
-            Rectangle returnRect = new Rectangle(boundingBox.X - padding, boundingBox.Y - padding, boundingBox.Width + (padding * 2), boundingBox.Height + (padding * 2));
-            if (returnRect.X < 0) returnRect.X = 0;
-            if (returnRect.Y < 0) returnRect.Y = 0;
-            if (returnRect.X + returnRect.Width >= frm.Cols) returnRect.Width = frm.Cols - returnRect.X;
-            if (returnRect.Y + returnRect.Height >= frm.Rows) returnRect.Height = frm.Rows - returnRect.Y;
-            return returnRect;
-        }
+
         private VectorOfPoint ScaleContour(VectorOfPoint contour, double widthRatio, double heightRatio)
         {
             Point[] pointsArr = new Point[contour.Size];
@@ -97,6 +94,7 @@ namespace ImageProcessor.Services
 
             return new VectorOfPoint(pointsArr);
         }
+
         private Image<Rgb, byte> RotateContour(Image<Rgb, byte> image, VectorOfPoint contour)
         {
             int edgePixelSize = 2;

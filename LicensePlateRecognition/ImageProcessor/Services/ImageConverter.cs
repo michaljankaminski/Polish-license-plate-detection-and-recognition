@@ -4,6 +4,7 @@ using Emgu.CV.Structure;
 using ImageProcessor.Models;
 using System;
 using System.Drawing;
+using ImageProcessor.Helpers;
 
 namespace ImageProcessor.Services
 {
@@ -18,10 +19,10 @@ namespace ImageProcessor.Services
         {
             var rgbImage = imageContext.OriginalBitmap.ToImage<Rgb, byte>();
 
-            rgbImage._EqualizeHist();
-
             //Grayscale
             var processedImage = rgbImage.Convert<Gray, byte>();
+
+            processedImage._EqualizeHist();
 
             //Resize
             ResizeImage(imageContext, processedImage);

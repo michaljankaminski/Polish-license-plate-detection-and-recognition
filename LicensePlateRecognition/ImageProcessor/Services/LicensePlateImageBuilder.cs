@@ -7,6 +7,10 @@ namespace ImageProcessor.Services
 {
     public interface ILicensePlateImageBuilder
     {
+        /// <summary>
+        /// Creates an image with all license plates found on the photo.
+        /// </summary>
+        /// <param name="imageContext"> ImageContext after final processing </param>
         void Build(ImageContext imageContext);
     }
 

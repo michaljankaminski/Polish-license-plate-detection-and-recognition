@@ -62,10 +62,6 @@ namespace ImageProcessor
                 _fileInputOutputHelper.SaveImage(imageContext);
                 imageContext.Dispose();
             });
-            //    foreach (var imageContext in _fileInputOutputHelper.ReadImages(imagesPath, FileType.jpg))
-            //{
-
-            //}
         }
 
         public Bitmap Process(string filePath, Settings settings = null)
@@ -77,18 +73,22 @@ namespace ImageProcessor
 
             var imageContext = _fileInputOutputHelper.ReadImage(filePath);
 
-            return ProcessSingleImage(imageContext, settings);
+            ProcessSingleImage(imageContext, settings);
+
+            var finalImage = (Bitmap)imageContext.ImageWithLicenses.Clone();
+
+            imageContext.Dispose();
+
+            return finalImage;
         }
 
-        private Bitmap ProcessSingleImage(ImageContext imageContext, Settings settings)
+        private void ProcessSingleImage(ImageContext imageContext, Settings settings)
         {
             _imageConverter.ApplyFullCannyOperator(imageContext, settings);
             _licensePlateAreaDetector.Detect(imageContext);
             _licensePlateAreaValidator.SetPotentialSecondLayerLicensePlates(imageContext);
-            _licensePlateReader.RecognizePlate(imageContext, false);
+            _licensePlateReader.RecognizePlate(imageContext);
             _licensePlateImageBuilder.Build(imageContext);
-
-            return imageContext.ImageWithLicenses;
         }
     }
 }

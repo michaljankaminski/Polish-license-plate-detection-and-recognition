@@ -13,10 +13,19 @@ namespace ImageProcessor.Services
 {
     public interface ILicensePlateAreaValidator
     {
+        /// <summary>
+        /// For each first layer potential license plate we are valtidating the histogram of the image. Each accepted image is also applying binary thresholding.
+        /// </summary>
+        /// <param name="imageContext"> ImageContext </param>
         void SetPotentialSecondLayerLicensePlates(ImageContext imageContext);
 
         IEnumerable<PotentialSecondLayerLicensePlate> GetPotentialSecondLayerLicensePlates(ImageContext imageContext);
 
+        /// <summary>
+        /// Get average of saturation [0] and value [1] channel averages.
+        /// </summary>
+        /// <param name="images"></param>
+        /// <returns></returns>
         IEnumerable<(ImageContext Image, float[] Averages)> GetHistogramAverages(IEnumerable<ImageContext> images);
     }
 
@@ -63,6 +72,7 @@ namespace ImageProcessor.Services
             return _imageCropper.CropImage(image, rectangle).ToImage<Hsv, byte>();
         }
 
+        
         private (float SatAverage, float ValAverage) GetHistogramAverages(Image<Hsv, byte> image)
         {
             image._EqualizeHist();
@@ -97,14 +107,17 @@ namespace ImageProcessor.Services
 
         private static bool IsSaturationInRange(float saturationAverage)
         {
+            // Accepted staturation average range
             return saturationAverage > 120 && saturationAverage < 145;
         }
 
         private static bool IsValueInRange(float valueAverage)
         {
+            // Accepted value average range
             return valueAverage > 100 && valueAverage < 200;
         }
 
+        // Histogram average calculation per single channel
         private static float GetHistogramAverage(Mat mat)
         {
             var sumWeight = 0f;
