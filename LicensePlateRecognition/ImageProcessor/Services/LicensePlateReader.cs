@@ -32,7 +32,7 @@ namespace ImageProcessor.Services
         {
             _ocrParams = new Dictionary<string, string>
             {
-                { "TEST_DATA_PATH", "D:\\OCR\\"},
+                { "TEST_DATA_PATH", Settings.TrainedDataPath},
                 { "TEST_DATA_LANG", ""},
                 { "WHITE_LIST", "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 " }
             };

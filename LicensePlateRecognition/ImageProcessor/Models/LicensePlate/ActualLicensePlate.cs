@@ -11,7 +11,6 @@ namespace ImageProcessor.Models.LicensePlate
         public ActualLicensePlate(PotentialSecondLayerLicensePlate potentialLicensePlate, string plateNumber, Image<Hsv, byte> cleanedLicensePlate) : base(potentialLicensePlate.Position)
         {
             PlateNumber = plateNumber;
-            //Image = potentialLicensePlate.Image;
             Image = cleanedLicensePlate;
         }
     }

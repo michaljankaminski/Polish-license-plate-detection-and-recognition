@@ -7,6 +7,10 @@ namespace ImageProcessor.Services
 {
     public interface ILicensePlateImageBuilder
     {
+        /// <summary>
+        /// Creates an image with all license plates found on the photo.
+        /// </summary>
+        /// <param name="imageContext"> ImageContext after final processing </param>
         void Build(ImageContext imageContext);
     }
 
@@ -15,15 +19,6 @@ namespace ImageProcessor.Services
         public void Build(ImageContext imageContext)
         {
             var image = imageContext.OriginalBitmap.ToImage<Rgb, byte>();
-
-            //var color = new MCvScalar(255, 0, 0);
-
-            //foreach (var actualLicensePlate in imageContext.PotentialSecondLayerLicensePlates)
-            //{
-            //    var position = actualLicensePlate.GetFullyScaledRectangle(imageContext);
-
-            //    CvInvoke.Rectangle(image, position, color);
-            //}
 
             var color = new MCvScalar(0, 255, 0);
 

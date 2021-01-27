@@ -77,11 +77,11 @@ namespace ImageProcessor.Services
             }
             if (image.ActualLicensePlates?.Count > 0)
             {
-                CreateDirectory(_imagePathProvider.GetActualLicensePlateFullPath(image, -1));
+                CreateDirectory(_imagePathProvider.GetActualLicensePlateFullPath(image, -1, ""));
 
                 for (var i = 0; i < image.ActualLicensePlates.Count; i++)
                 {
-                    path = _imagePathProvider.GetActualLicensePlateFullPath(image, i);
+                    path = _imagePathProvider.GetActualLicensePlateFullPath(image, i, image.ActualLicensePlates[i].PlateNumber);
                     image.ActualLicensePlates[i].Image.Save(path);
                 }
             }
