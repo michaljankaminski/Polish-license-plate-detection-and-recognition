@@ -1,4 +1,3 @@
-using System;
 using ImageProcessor.Helpers;
 using ImageProcessor.Models;
 using ImageProcessor.Services;
@@ -11,8 +10,6 @@ namespace ImageProcessorTests
     {
         private readonly IFileInputOutputHelper _fileInputOutputHelper;
         private readonly IImagePathProvider _imagePathProvider;
-        private readonly IImageConverter _imageConverter;
-        private readonly ILicensePlateAreaDetector _licensePlateAreaDetector;
         private readonly ILicensePlateAreaValidator _licensePlateAreaValidator;
         private readonly IImageCropper _imageCropper;
 
@@ -20,18 +17,14 @@ namespace ImageProcessorTests
         {
             _imagePathProvider = new ImagePathProvider();
             _fileInputOutputHelper = new FileInputOutputHelper(_imagePathProvider);
-            _imageConverter = new ImageConverter();
             _imageCropper = new ImageCropper();
-            _licensePlateAreaDetector = new LicensePlateAreaDetector();
             _licensePlateAreaValidator = new LicensePlateAreaValidator(_imageCropper);
         }
 
-        [Fact]
-        public void GetLicensesHistogramAverages()
+        [Theory]
+        [InlineData(@"C:\dev\licenseplates")]
+        public void GetLicensesHistogramAverages(string path)
         {
-            var path = @"C:\dev\licenseplates";
-            //path = @"C:\dev\notlicense";
-
             var images = _fileInputOutputHelper.ReadImages(path, FileType.png);
 
             var avgByImage = _licensePlateAreaValidator.GetHistogramAverages(images).ToList();
@@ -45,8 +38,6 @@ namespace ImageProcessorTests
             var lowestValueAvg = avgs.Min(x => x[1]);
             var meanValueAvg = avgs.Average(x => x[1]);
             var highestValueAvg = avgs.Max(x => x[1]);
-
-            int w = 1;
 
             foreach (var image in avgByImage)
             {

@@ -6,6 +6,7 @@ using ImageProcessor.Models;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using ImageProcessor.ExternalSources;
 using ImageProcessor.Helpers;
 using ImageProcessor.Models.LicensePlate;
 
@@ -142,7 +143,7 @@ namespace ImageProcessor.Services
         {
             using var bitMap = licensePlate.Image.ToBitmap();
 
-            ImageConverter.SetContrast(bitMap, 15);
+            ImageContrastModifer.SetContrast(bitMap, 15);
 
             var newImg = bitMap
                 .ToImage<Hsv, byte>()

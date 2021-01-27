@@ -3,8 +3,11 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 
-namespace ImageProcessor.Helpers
+namespace ImageProcessor.ExternalSources
 {
+    /// <summary>
+    /// Source https://github.com/Zaid-Ajaj/Image-Processor/blob/master/ImageFilter/LockBitmap.cs
+    /// </summary>
     public class LockBitmap
     {
         private readonly Bitmap _source = null;
